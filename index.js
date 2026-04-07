@@ -121,6 +121,7 @@ app.post("/add-member-to-organization", authMiddleware, async (req, res) => {
     })
 })
 
+//BOARDS
 app.post("/board", authMiddleware, async(req, res) => {
     const userId = req.userId;
     const title = req.body.title;
@@ -156,6 +157,7 @@ app.post("/board", authMiddleware, async(req, res) => {
     })
 })
 
+//ISSUES
 app.post("/issue", authMiddleware, async (req, res) => {
     const userId = req.userId;
     const title =  req.body.title;
@@ -245,6 +247,7 @@ app.get("/organization", authMiddleware, async (req, res) => {
     })
 })
 
+//FETCH BOARDS
 app.get("/boards", authMiddleware, async (req, res) => {
     const { organizationId } = req.query;
     if (!organizationId) {
@@ -261,6 +264,8 @@ app.get("/boards", authMiddleware, async (req, res) => {
     })
 })
 
+
+//FETCH ISSUES
 app.get("/issues", async (req, res) => {
     const { issueId } = req.query;
     if (!issueId) { 
