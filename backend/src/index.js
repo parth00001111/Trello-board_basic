@@ -1,7 +1,7 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const { authMiddleware } = require("./middleware")
-const connectDb = require("./db")
+const connectDb = require("../db")
 connectDb();
 const dotenv = require("dotenv");
 const cors = require("cors");
