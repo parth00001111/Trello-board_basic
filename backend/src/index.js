@@ -1,7 +1,8 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const { authMiddleware } = require("./middleware")
-const connectDb = require("../db")
+const cookieParser = require("cookie-parser")
+const connectDb = require("./db")
 connectDb();
 const dotenv = require("dotenv");
 const cors = require("cors");
@@ -19,6 +20,7 @@ app.use(cors({
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
+app.use(cookieParser());
 
 // CREATE
 app.post("/signup", async (req, res) => {
@@ -83,6 +85,7 @@ app.post("/signin", async (req, res) => {
 app.post("/organization", authMiddleware, async (req, res) => {
     const userId = req.userId;
 
+
     const newOrg = await organizationModel.create({
         title: req.body.title,
         description: req.body.description,
@@ -96,6 +99,22 @@ app.post("/organization", authMiddleware, async (req, res) => {
         id: newOrg._id
     })
 })
+
+app.get("/organizations", authMiddleware, async (req, res) => {
+    try {
+        const organizations = await organizationModel.find({
+            admin: req.userId
+        });
+
+        res.json({
+            organizations
+        });
+    } catch (err) {
+        res.status(500).json({
+            message: "Failed to fetch organizations"
+        });
+    }
+});
 
 app.post("/add-member-to-organization", authMiddleware, async (req, res) => {
     const userId = req.userId;
