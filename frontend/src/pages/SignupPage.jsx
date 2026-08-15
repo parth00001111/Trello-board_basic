@@ -10,7 +10,7 @@ const SignupPage = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate()
    const dashFun = () => {
-    navigate("/")
+    navigate("/signin")
   }
 
   const handleSubmit = async (e) => {

@@ -23,6 +23,8 @@
     "jsonwebtoken": "^9.0.3",
     "lucide": "^1.31.0",
     "lucide-react": "^1.31.0",
-    "mongoose": "^9.9.1"
+    "mongoose": "^9.9.1",
+    "react-cookie": "^8.1.2",
+    "react-dom": "^19.2.8"
   }
 }

@@ -4,7 +4,7 @@ import axios from "axios";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom"
 
-const SignupPage = () => {
+const SigninPage = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -24,6 +24,7 @@ const SignupPage = () => {
 
       console.log(response.data);
       alert("signin successful!");
+      navigate("/dashboard")
   
       
       setUsername("");
@@ -111,4 +112,4 @@ const SignupPage = () => {
   );
 };
 
-export default SignupPage;
+export default SigninPage;

@@ -19,7 +19,7 @@ const LandingPage = () => {
       <div className="flex justify-between">
         <div className="mt-4 flex">
           <img onClick={dashFun} className="h-20 w-30 ml-15" src={logoPng} alt="error occured"/>
-          <h1 className="text-4xl font-bold mt-5">TaskFlow</h1>
+          <h1 className="text-4xl font-bold mt-5 ">TaskFlow</h1>
         </div>
 
         <div className="flex justify-between gap-10 pt-10 text-xl pl-10">
