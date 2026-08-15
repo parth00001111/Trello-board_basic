@@ -43,7 +43,7 @@ const SignupPage = () => {
       <div className="bg-white rounded-3xl shadow-2xl flex overflow-hidden w-220 h-150">
         <div className="flex-1 flex flex-col justify-center px-12 py-10">
           <div className="mb-8">
-            <img src={logoPng} alt="Logo" className="h-14 mb-6 -ml-2"  />
+            <img onClick={() => navigate("/")} src={logoPng} alt="Logo" className="h-14 mb-6 -ml-5"/>
             <h1 className="text-3xl font-bold text-gray-800">Login</h1>
             <p className="text-gray-500 mt-2 text-sm">
               Join us and start organizing your work
