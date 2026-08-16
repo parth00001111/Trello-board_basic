@@ -100,26 +100,11 @@ app.post("/organization", authMiddleware, async (req, res) => {
     })
 })
 
-app.get("/organizations", authMiddleware, async (req, res) => {
-    try {
-        const organizations = await organizationModel.find({
-            admin: req.userId
-        });
-
-        res.json({
-            organizations
-        });
-    } catch (err) {
-        res.status(500).json({
-            message: "Failed to fetch organizations"
-        });
-    }
-});
 
 app.post("/add-member-to-organization", authMiddleware, async (req, res) => {
     const userId = req.userId;
     const organizationId = req.body.organizationId;
-    const memberUsername = req.body.memberUsername; // aakash
+    const memberUsername = req.body.memberUsername; 
 
     // const organization = ORGANIZATIONS.find(org => org.id === organizationId);
     const organization = await organizationModel.findOne({
@@ -247,6 +232,22 @@ app.post("/issue", authMiddleware, async (req, res) => {
 })
 
 //GET endpoints
+app.get("/organizations", authMiddleware, async (req, res) => {
+    try {
+        const organizations = await organizationModel.find({
+            admin: req.userId
+        });
+
+        res.json({
+            organizations
+        });
+    } catch (err) {
+        res.status(500).json({
+            message: "Failed to fetch organizations"
+        });
+    }
+}); //will get all organizations;
+
 app.get("/organization", authMiddleware, async (req, res) => {
     const userId = req.userId;
     const organizationId = req.query.organizationId;
@@ -276,7 +277,42 @@ app.get("/organization", authMiddleware, async (req, res) => {
             }))
         }
     })
-})
+})//will find organization with id with members
+
+app.get("/organization/:id", authMiddleware, async (req, res) => {
+    try {
+        const organization = await organizationModel.findOne({
+            _id: req.params.id,
+            admin: req.userId
+        });
+
+        if (!organization) {
+            return res.status(404).json({ message: "Organization not found" });
+        }
+
+        res.json({ organization });
+    } catch (err) {
+        res.status(500).json({ message: "Failed to fetch organization" });
+    }
+});
+
+
+app.get("/organization/:id", authMiddleware, async (req, res) => {
+    try {
+        const organization = await organizationModel.findOne({
+            _id: req.params.id,
+            admin: req.userId
+        });
+
+        if (!organization) {
+            return res.status(404).json({ message: "Organization not found" });
+        }
+
+        res.json({ organization });
+    } catch (err) {
+        res.status(500).json({ message: "Failed to fetch organization" });
+    }
+});
 
 //FETCH BOARDS
 app.get("/boards", authMiddleware, async (req, res) => {
@@ -350,7 +386,7 @@ app.put("/issues", authMiddleware, async (req, res) => {
         })
         return;
     }
-    if(!assigned) {
+    if(!assignedTo) {
         res.json({
             message: "User is not the memebr"
         })

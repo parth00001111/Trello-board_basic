@@ -30,6 +30,8 @@ const boardsSchema = mongoose.Schema({
         type:mongoose.Schema.Types.ObjectId,
         ref: 'users'
     }
+},{
+    timestamps:true,
 })
 
 const issueSchema = mongoose.Schema({

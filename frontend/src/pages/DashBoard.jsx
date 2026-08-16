@@ -2,29 +2,27 @@ import logo from "../assets/logo.png";
 import { useState, useEffect } from "react"
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { Building2 } from "lucide-react"
+import { Plus } from "lucide-react"
+
+import { ExternalLink } from "lucide-react"
 const DashBoard = () => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
   const [organizations, setOrganizations] = useState([]);
-
-   const username = document.cookie
-    .split("; ")
-    .find((row) => row.startsWith("username="))
-    ?.split("=")[1];
-
   const navigate = useNavigate();
+  const username = document.cookie.split("; ").find((row) => row.startsWith("username="))?.split("=")[1];
+
 
   const fetchOrganizations = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/organization`, {
+      const res = await axios.get(`http://localhost:5000/organizations`, {
         withCredentials: true
       });
       setOrganizations(res.data.organizations);
+      console.log(res.data.organizations);
+      
     } catch (err) {
       console.log(err.message);
     }
@@ -45,7 +43,10 @@ const DashBoard = () => {
         withCredentials: true
       })
       console.log(response.data);
+      setTitle("");
+      setDescription("");
       alert("Organization created successfully")
+      fetchOrganizations();
     }catch(err){
       console.log(err.message);
       setError(err.message)
@@ -54,11 +55,21 @@ const DashBoard = () => {
       setLoading(false)
     }
   }
+  const logout = async () => {
+    try {
+      await axios.post(`http://localhost:5000/logout`, {}, {
+        withCredentials: true
+      });
+      navigate("/signin");
+    } catch (err) {
+      console.log(err.message);
+    }
+  };
 
   return (
     <div className=" min-h-screen w-screen bg-linear-to-br from-orange-50 via-amber-50 to-rose-50 font-sans">
       {/* div 1 */}
-      <div className="flex justify-between w-screen bg-white h-25 shadow-xl items-center">
+      <div className="flex justify-between w-screen bg-white h-25 shadow-md items-center">
         <div className="flex items-center">
           <img
             onClick={() => navigate("/")}
@@ -79,7 +90,7 @@ const DashBoard = () => {
           <p className=" font-medium flex-1 ml-15 mt-4 text-2xl">
             Hi {username},  
           </p>
-          <button onClick={() => navigate("/signin")} className="bg-orange-500 h-15 w-35 rounded-2xl text-xl text-white hover:bg-orange-600">Logout</button>
+          <button onClick={logout} className="bg-orange-500 h-15 w-35 rounded-2xl text-xl text-white hover:bg-orange-600">Logout</button>
         </div>
       </div>
 
@@ -99,15 +110,33 @@ const DashBoard = () => {
             <textarea required="none" className="w-full h-45 border border-gray-300 text-xl rounded-xl px-4 py-3  resize focus:outline-none focus:border-orange-500" type="text" onChange={(e) => setDescription(e.target.value)} value={description} name="description" placeholder="Enter organization description (optional)" />
             <p className="text-sm text-gray-400 text-right -mt-9 mr-3">{description.length} / 300</p>
             </div>
-            <button type="submit" disabled={loading} className="flex bg-orange-500 hover:bg-orange-600 gap-4 h-14 justify-center items-center rounded-xl w-100 mt-10 cursor-pointer">
-              <Building2 className="text-white h-15" />
-              <p className="text-white text-xl">{loading ? "Creating..." : "Create Organization"}</p>
+            <button type="submit" disabled={loading} className="flex  bg-orange-500 hover:bg-orange-600 gap-2 h-14 justify-center items-center rounded-xl w-100 mt-10 cursor-pointer">
+              <Plus className="text-white h-10 w-9" />
+              <p className="text-white text-2xl mb-1">{loading ? "Creating..." : "Create Organization"}</p>
               
               </button>
 
           </form>
         </div>
-        <div></div>
+        <div className="">
+          <h1 className="text-5xl font-medium mt-7 ml-20">Your Organizations</h1>
+          <p className="text-gray-500 ml-21 text-xl mt-3">Open an organization to access projects, tasks and team members.</p>
+          <div className="flex flex-wrap gap-10 mt-5 ml-20">
+            {organizations.map((org) => (
+              <div key={org._id} className="h-40 w-140 bg-white shadow-md rounded-2xl p-4">
+                <h2 className="text-2xl font-bold">{org.title}</h2>
+                <div className="flex justify-between items-center mt-2">
+                <p className="text-lg text-gray-500">{org.description}</p>
+                <div className="bg-orange-500 gap-3 h-13 w-35 cursor-pointer rounded-2xl text-xl text-white flex justify-center items-center hover:bg-orange-600">
+                  <p onClick={() => navigate(`/organizations/${org._id}`)} className="">Open</p>
+                  <ExternalLink className="text-center" />
+                  </div>
+
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
 
       </div>
     </div>
