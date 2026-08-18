@@ -16,7 +16,15 @@ const OrganizationPage = () => {
     const [creating, setCreating] = useState(false);
     const [error, setError] = useState("");
 
-    const username = document.cookie.split("; ").find((row) => row.startsWith("username="))?.split("=")[1];
+   const fullName = decodeURIComponent(
+    document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("username="))
+      ?.split("=")[1] || ""
+  );
+
+  
+  const firstName = fullName.split(" ")[0];
 
     const fetchOrganization = async () => {
         try {
@@ -127,10 +135,10 @@ const OrganizationPage = () => {
             </div>
 
             <div className="flex items-center gap-4">
-              <p className="font-medium text-2xl">Hi {username},</p>
+              <p className="font-medium text-2xl">Hi {firstName},</p>
               <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center">
                 <p className="text-orange-500 font-semibold text-lg">
-                  {username?.charAt(0).toUpperCase()}
+                  {firstName?.charAt(0).toUpperCase()}
                 </p>
               </div>
               <button onClick={logout} className="bg-orange-500 h-15 w-35 rounded-2xl text-xl text-white hover:bg-orange-600">Logout</button>
@@ -142,13 +150,13 @@ const OrganizationPage = () => {
 
             {/* Create Board */}
             <div className="w-120 bg-white m-20 shadow-xl rounded-3xl flex flex-col px-10 py-8">
-              <h1 className="text-3xl font-bold">Create Board</h1>
-              <p className="text-gray-500 mt-3">Create a new board to organize tasks and collaborate with your team.</p>
+              <h1 className="text-4xl font-bold">Create Board</h1>
+              <p className="text-gray-500 text-xl mt-3">Create a new board to organize tasks and collaborate with your team.</p>
 
               <form className="w-full mt-6 flex flex-col gap-2" onSubmit={handleCreateBoard}>
-                <label className="text-lg font-bold">Board Title</label>
+                <label className="text-3xl font-bold">Board Title</label>
                 <input
-                  className="w-full h-12 border border-gray-300 rounded-xl px-4 text-base focus:outline-none focus:border-orange-500"
+                  className="w-full  h-12 border border-gray-300 rounded-xl px-4 text-xl focus:outline-none focus:border-orange-500"
                   type="text"
                   placeholder="Enter board title (e.g. Website Redesign)"
                   value={boardTitle}

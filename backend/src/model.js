@@ -11,7 +11,7 @@ const organizationSchema = mongoose.Schema({
     title: String,
     description: String,
     admin:{
-        type:mongoose.Schema.Types.ObjectId,
+        type:mongoose.Schema.Types.ObjectId,    
         ref: "users"
     },
     members: [{
