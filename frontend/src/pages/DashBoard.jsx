@@ -1,202 +1,271 @@
-import logo from "../assets/logo.png";
-import { useState, useEffect } from "react";
-import axios from "axios";
+import { useEffect, useMemo, useState } from "react";
+import {
+  ArrowUpRight,
+  BriefcaseBusiness,
+  CalendarDays,
+  FolderKanban,
+  Plus,
+  Sparkles,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { Plus, ExternalLink } from "lucide-react";
+import AppShell from "../components/AppShell";
+import EmptyState from "../components/EmptyState";
+import InlineNotice from "../components/InlineNotice";
+import Modal from "../components/Modal";
+import PageLoader from "../components/PageLoader";
+import useAuth from "../hooks/useAuth";
+import api, { getErrorMessage } from "../lib/api";
 
-const DashBoard = () => {
+const getGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+};
+
+const formatDate = (value) => {
+  if (!value) return "Recently created";
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(value));
+};
+
+const Dashboard = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [organizations, setOrganizations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [formError, setFormError] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [organizations, setOrganizations] = useState([]);
-  const navigate = useNavigate();
-
-  // Full name cookie extracted from the cookie and decoded to get the first name of the user for greeting purposes.
-  const fullName = decodeURIComponent(
-    document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("username="))
-      ?.split("=")[1] || ""
-  );
-
-  
-  const firstName = fullName.split(" ")[0];
-
-  const fetchOrganizations = async () => {
-    try {
-      const res = await axios.get(`http://localhost:5000/organizations`, {
-        withCredentials: true,
-      });
-      setOrganizations(res.data.organizations);
-      console.log(res.data.organizations);
-    } catch (err) {
-      console.log(err.message);
-    }
-  };
 
   useEffect(() => {
-    fetchOrganizations();
+    let active = true;
+
+    api
+      .get("/organizations")
+      .then(({ data }) => {
+        if (active) setOrganizations(data.organizations || []);
+      })
+      .catch((error) => {
+        if (active) {
+          setLoadError(getErrorMessage(error, "We couldn’t load your workspaces."));
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const response = await axios.post(
-        `http://localhost:5000/organization`,
-        {
-          title: title,
-          description: description,
-        },
-        {
-          withCredentials: true,
-        }
-      );
-      console.log(response.data);
-      setTitle("");
-      setDescription("");
-      alert("Organization created successfully");
-      fetchOrganizations();
-    } catch (err) {
-      console.log(err.message);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+  const firstName = useMemo(
+    () => user?.username?.trim().split(/\s+/)[0] || "there",
+    [user?.username],
+  );
+
+  const closeCreate = () => {
+    if (creating) return;
+    setCreateOpen(false);
+    setFormError("");
   };
 
-  const logout = async () => {
+  const createOrganization = async (event) => {
+    event.preventDefault();
+    const cleanTitle = title.trim();
+
+    if (cleanTitle.length < 2) {
+      setFormError("Workspace name needs at least 2 characters.");
+      return;
+    }
+
+    setCreating(true);
+    setFormError("");
+
     try {
-      await axios.post(
-        `http://localhost:5000/logout`,
-        {},
-        {
-          withCredentials: true,
-        }
-      );
-      navigate("/signin");
-    } catch (err) {
-      console.log(err.message);
+      const { data } = await api.post("/organization", {
+        title: cleanTitle,
+        description: description.trim(),
+      });
+      const organizationId = data.organization?._id || data.id;
+
+      setTitle("");
+      setDescription("");
+      setCreateOpen(false);
+
+      if (organizationId) {
+        navigate(`/organizations/${organizationId}`);
+      } else {
+        const response = await api.get("/organizations");
+        setOrganizations(response.data.organizations || []);
+      }
+    } catch (error) {
+      setFormError(getErrorMessage(error, "We couldn’t create this workspace."));
+    } finally {
+      setCreating(false);
     }
   };
 
   return (
-    <div className="min-h-screen w-screen bg-linear-to-br from-orange-50 via-amber-50 to-rose-50 font-sans">
-      {/* Navbar */}
-      <div className="flex justify-between w-screen bg-white h-25 shadow-md items-center">
-        <div className="flex items-center">
-          <img
-            onClick={() => navigate("/")}
-            className="h-20 w-30 cursor-pointer"
-            src={logo}
-            alt="TaskFlow Logo"
-          />
-          <h1 className="text-4xl font-bold mt-1">TaskFlow</h1>
-          <span className="h-10 border border-gray-200 mt-5 ml-10"></span>
-          <p className="text-orange-500 text-2xl ml-7 mt-4 font-medium">
-            Dashboard
-          </p>
-          <span className="w-32 border border-orange-500 -ml-30 mt-17"></span>
-        </div>
-
-        {/* Only First Name + Logout */}
-        <div className="pr-8 flex items-center gap-5">
-          <p className="text-gray-500 text-xl font-normal">
-            Hi {firstName},
-          </p>
-
-          <button
-            onClick={logout}
-            className="bg-orange-500 h-15 px-10 rounded-2xl text-xl text-white hover:bg-orange-600"
-          >
-            Logout
-          </button>
-        </div>
-      </div>
-
-      {/* Hero Section */}
-      <div className="flex">
-        {/* Create Organization Card */}
-        <div className="h-160 w-120 bg-white m-20 shadow-xl rounded-3xl flex flex-col items-start px-10 py-8">
-          <h1 className="text-4xl font-medium mt-7">Create Organization</h1>
-          <p className="text-xl mt-4 text-gray-500">
-            Create a new organization to manage your projects and teams.
-          </p>
-
-          <form className="w-full mt-5" onSubmit={handleSubmit}>
-            <div>
-              <label className="text-2xl font-medium">Organization Name</label>
-              <input
-                className="w-full h-12 border text-xl border-gray-300 rounded-xl px-4 mt-2 outline-orange-500"
-                type="text"
-                onChange={(e) => setTitle(e.target.value)}
-                value={title}
-                name="title"
-                required
-                placeholder="Enter organization name"
-              />
-            </div>
-
-            <div className="mt-5">
-              <label className="text-2xl font-medium">Description</label>
-              <textarea
-                className="w-full h-45 border border-gray-300 text-xl rounded-xl px-4 py-3 resize focus:outline-none focus:border-orange-500"
-                onChange={(e) => setDescription(e.target.value)}
-                value={description}
-                name="description"
-                placeholder="Enter organization description (optional)"
-                maxLength={300}
-              />
-              <p className="text-sm text-gray-400 text-right -mt-9 mr-3">
-                {description.length} / 300
-              </p>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex bg-orange-500 hover:bg-orange-600 gap-2 h-14 justify-center items-center rounded-xl w-100 mt-10 cursor-pointer"
-            >
-              <Plus className="text-white h-10 w-9" />
-              <p className="text-white text-2xl mb-1">
-                {loading ? "Creating..." : "Create Organization"}
-              </p>
-            </button>
-          </form>
-        </div>
-
-        {/* Organizations List */}
+    <AppShell>
+      <section className="page-hero dashboard-hero">
         <div>
-          <h1 className="text-5xl font-medium mt-7 ml-20">Your Organizations</h1>
-          <p className="text-gray-500 ml-21 text-xl mt-3">
-            Open an organization to access projects, tasks and team members.
+          <p className="eyebrow">
+            <Sparkles size={14} /> Your command center
           </p>
+          <h1>
+            {getGreeting()}, <span>{firstName}.</span>
+          </h1>
+          <p>Pick up where your team left off, or shape a new place to work.</p>
+        </div>
+        <button className="btn btn-primary" type="button" onClick={() => setCreateOpen(true)}>
+          <Plus size={18} /> New workspace
+        </button>
+      </section>
 
-          <div className="flex flex-wrap gap-10 mt-5 ml-20">
-            {organizations.map((org) => (
-              <div
-                key={org._id}
-                className="h-40 w-140 bg-white shadow-md rounded-2xl p-4"
-              >
-                <h2 className="text-4xl font-bold">{org.title}</h2>
-                <div className="flex justify-between items-center mt-2">
-                  <p className="text-xl text-gray-500">{org.description}</p>
-                  <div
-                    onClick={() => navigate(`/organizations/${org._id}`)}
-                    className="bg-orange-500 gap-3 h-13 w-50 cursor-pointer rounded-2xl text-xl text-white flex justify-center items-center hover:bg-orange-600"
-                  >
-                    <p>Open</p>
-                    <ExternalLink className="text-center" />
+      <section className="dashboard-overview" aria-label="Workspace overview">
+        <article className="overview-card overview-card-accent">
+          <span className="overview-icon"><BriefcaseBusiness size={20} /></span>
+          <div>
+            <strong>{organizations.length}</strong>
+            <span>{organizations.length === 1 ? "Workspace" : "Workspaces"}</span>
+          </div>
+        </article>
+        <article className="overview-card">
+          <span className="overview-icon overview-icon-blue"><FolderKanban size={20} /></span>
+          <div>
+            <strong>{organizations.length ? "Ready" : "Start"}</strong>
+            <span>Planning status</span>
+          </div>
+        </article>
+        <article className="overview-card dashboard-date-card">
+          <span className="overview-icon overview-icon-violet"><CalendarDays size={20} /></span>
+          <div>
+            <strong>
+              {new Intl.DateTimeFormat("en", { weekday: "long" }).format(new Date())}
+            </strong>
+            <span>
+              {new Intl.DateTimeFormat("en", { month: "long", day: "numeric" }).format(
+                new Date(),
+              )}
+            </span>
+          </div>
+        </article>
+      </section>
+
+      <section className="content-section">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Spaces</p>
+            <h2>Your workspaces</h2>
+            <p>Boards, people and tasks stay organized inside each workspace.</p>
+          </div>
+          <span className="section-count">{organizations.length}</span>
+        </div>
+
+        <InlineNotice message={loadError} />
+
+        {loading ? (
+          <PageLoader label="Loading workspaces" />
+        ) : organizations.length ? (
+          <div className="workspace-grid">
+            {organizations.map((organization, index) => (
+              <article className="workspace-card" key={organization._id}>
+                <div className={`workspace-card-cover cover-${(index % 4) + 1}`}>
+                  <span className="workspace-monogram" aria-hidden="true">
+                    {organization.title?.charAt(0).toUpperCase()}
+                  </span>
+                  <span className="workspace-role">Workspace</span>
+                </div>
+                <div className="workspace-card-body">
+                  <div>
+                    <h3>{organization.title}</h3>
+                    <p>{organization.description || "A focused space for your team’s best work."}</p>
+                  </div>
+                  <div className="workspace-card-meta">
+                    <span>Created {formatDate(organization.createdAt)}</span>
+                    <button
+                      className="workspace-open-button"
+                      type="button"
+                      onClick={() => navigate(`/organizations/${organization._id}`)}
+                      aria-label={`Open ${organization.title}`}
+                    >
+                      Open <ArrowUpRight size={17} />
+                    </button>
                   </div>
                 </div>
-              </div>
+              </article>
             ))}
           </div>
-        </div>
-      </div>
-    </div>
+        ) : (
+          <EmptyState
+            icon={BriefcaseBusiness}
+            title="Your first workspace starts here"
+            description="Create a workspace for a product, campaign or team. You can add boards and invite people next."
+            action={
+              <button className="btn btn-primary" type="button" onClick={() => setCreateOpen(true)}>
+                <Plus size={17} /> Create workspace
+              </button>
+            }
+          />
+        )}
+      </section>
+
+      <Modal
+        open={createOpen}
+        onClose={closeCreate}
+        title="Create a workspace"
+        eyebrow="A home for the work"
+      >
+        <form className="modal-form" onSubmit={createOrganization}>
+          <div className="field">
+            <label className="field-label" htmlFor="workspace-title">Workspace name</label>
+            <input
+              className="input"
+              id="workspace-title"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder="e.g. Product studio"
+              maxLength={80}
+              autoFocus
+              required
+            />
+          </div>
+          <div className="field">
+            <div className="field-label-row">
+              <label className="field-label" htmlFor="workspace-description">Description</label>
+              <span>{description.length}/300</span>
+            </div>
+            <textarea
+              className="textarea"
+              id="workspace-description"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder="What will your team organize here?"
+              maxLength={300}
+            />
+          </div>
+          <InlineNotice message={formError} />
+          <div className="modal-actions">
+            <button className="btn btn-secondary" type="button" onClick={closeCreate}>
+              Cancel
+            </button>
+            <button className="btn btn-primary" type="submit" disabled={creating}>
+              {creating && <span className="spinner" aria-hidden="true" />}
+              {creating ? "Creating…" : "Create workspace"}
+            </button>
+          </div>
+        </form>
+      </Modal>
+    </AppShell>
   );
 };
 
-export default DashBoard;
+export default Dashboard;

@@ -1,116 +1,162 @@
-import signupPng from "../assets/signup.png";
-import logoPng from "../assets/logo.png";
-import axios from "axios";
+import { Check, CircleAlert, LoaderCircle } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import api from "../lib/api";
+import AuthField from "../components/AuthField";
+import AuthLayout from "../components/AuthLayout";
 
 const SignupPage = () => {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [form, setForm] = useState({ username: "", password: "", confirmPassword: "" });
+  const [errors, setErrors] = useState({});
+  const [submitError, setSubmitError] = useState("");
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate()
-   const dashFun = () => {
-    navigate("/signin")
-  }
+  const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const updateField = (field) => (event) => {
+    setForm((current) => ({ ...current, [field]: event.target.value }));
+    setErrors((current) => ({
+      ...current,
+      [field]: "",
+      ...(field === "password" ? { confirmPassword: "" } : {}),
+    }));
+    setSubmitError("");
+  };
+
+  const validate = () => {
+    const nextErrors = {};
+    const username = form.username.trim();
+
+    if (!username) {
+      nextErrors.username = "Choose a username.";
+    } else if (username.length < 3 || username.length > 40) {
+      nextErrors.username = "Username must be between 3 and 40 characters.";
+    }
+
+    if (!form.password) {
+      nextErrors.password = "Create a password.";
+    } else if (form.password.length < 8) {
+      nextErrors.password = "Password must be at least 8 characters.";
+    }
+
+    if (!form.confirmPassword) {
+      nextErrors.confirmPassword = "Confirm your password.";
+    } else if (form.password !== form.confirmPassword) {
+      nextErrors.confirmPassword = "Passwords do not match.";
+    }
+
+    return nextErrors;
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    const nextErrors = validate();
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      document.getElementById(`signup-${Object.keys(nextErrors)[0]}`)?.focus();
+      return;
+    }
+
     setLoading(true);
+    setSubmitError("");
 
     try {
-      const response = await axios.post("http://localhost:5000/signup", {
-        username: username,
-        password: password,
-      }, {
-        withCredentials: true
+      await api.post("/signup", {
+        username: form.username.trim(),
+        password: form.password,
       });
-
-      console.log(response.data);
-      alert("Signup successful!");
-      navigate("/signin")
-      
-      setUsername("");
-      setPassword("");
-    } catch (err) {
-      console.error(err);
-      const errorMessage =
-        err.response?.data?.message || err.message || "Signup failed. Please try again.";
-      alert(errorMessage);
+      navigate("/signin", {
+        replace: true,
+        state: { registrationMessage: "Account created. Sign in to open your workspace." },
+      });
+    } catch (error) {
+      setSubmitError(
+        error.response?.data?.message ||
+          "We could not create your account. Please try again."
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex justify-center items-center min-h-screen w-screen bg-linear-to-br from-orange-50 via-amber-50 to-rose-50 font-sans">
-      <div className="bg-white rounded-3xl shadow-2xl flex overflow-hidden w-220 h-150">
-        <div className="flex-1 flex flex-col justify-center px-12 py-10">
-          <div className="mb-8">
-            <img onClick={dashFun} src={logoPng} alt="Logo" className="h-14 mb-6" />
-            <h1 className="text-3xl font-bold text-gray-800">Create Account</h1>
-            <p className="text-gray-500 mt-2 text-sm">
-              Join us and start organizing your work
-            </p>
+    <AuthLayout
+      eyebrow="Start for free"
+      title="Create your TaskFlow account"
+      description="Set up a calm, shared home for projects your team can understand at a glance."
+      previewTitle="Give every project a clear path."
+      previewDescription="Start with a board, invite the team, and turn scattered requests into visible progress."
+      footer={
+        <p>
+          Already have an account? <Link to="/signin">Sign in</Link>
+        </p>
+      }
+    >
+      <form className="tf-auth-form" onSubmit={handleSubmit} noValidate aria-busy={loading}>
+        {submitError && (
+          <div className="tf-form-alert" role="alert">
+            <CircleAlert size={18} aria-hidden="true" />
+            <span>{submitError}</span>
           </div>
+        )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Username
-              </label>
-              <input
-                type="text"
-                name="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter your username"
-                required
-                className="w-full h-11 px-4 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition"
-              />
-            </div>
+        <AuthField
+          id="signup-username"
+          label="Username"
+          name="username"
+          value={form.username}
+          onChange={updateField("username")}
+          error={errors.username}
+          hint="Use 3–40 characters."
+          autoComplete="username"
+          autoCapitalize="none"
+          spellCheck={false}
+          maxLength={40}
+          placeholder="Choose a username"
+          disabled={loading}
+          required
+        />
+        <AuthField
+          id="signup-password"
+          label="Password"
+          name="password"
+          type="password"
+          value={form.password}
+          onChange={updateField("password")}
+          error={errors.password}
+          hint="Use at least 8 characters."
+          autoComplete="new-password"
+          autoCapitalize="none"
+          minLength={8}
+          placeholder="Create a password"
+          disabled={loading}
+          required
+        />
+        <AuthField
+          id="signup-confirmPassword"
+          label="Confirm password"
+          name="confirmPassword"
+          type="password"
+          value={form.confirmPassword}
+          onChange={updateField("confirmPassword")}
+          error={errors.confirmPassword}
+          autoComplete="new-password"
+          autoCapitalize="none"
+          placeholder="Enter your password again"
+          disabled={loading}
+          required
+        />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Password
-              </label>
-              <input
-                type="password"
-                name="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                required
-                className="w-full h-11 px-4 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full h-11 mt-2 bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300 text-white font-semibold rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
-            >
-              {loading ? "Creating Account..." : "Create Account"}
-            </button>
-          </form>
-
-          <p className="text-center text-sm text-gray-500 mt-6">
-            Already have an account?{" "}
-            <span onClick={() => navigate("/signin")} className="text-orange-600 font-medium cursor-pointer hover:underline">
-              Login
-            </span>
-          </p>
+        <div className="tf-password-note">
+          <Check size={14} aria-hidden="true" /> Use a unique password you do not reuse elsewhere.
         </div>
 
-        <div className="flex-1 relative">
-          <img
-            src={signupPng}
-            alt="Signup"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-linear-to-t from-black/30 to-transparent"></div>
-        </div>
-      </div>
-    </div>
+        <button className="tf-submit-button" type="submit" disabled={loading}>
+          {loading && <LoaderCircle className="tf-spinner" size={18} aria-hidden="true" />}
+          {loading ? "Creating your account…" : "Create account"}
+        </button>
+      </form>
+    </AuthLayout>
   );
 };
 

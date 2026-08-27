@@ -1,114 +1,135 @@
-import signupPng from "../assets/signup.png";
-import logoPng from "../assets/logo.png";
-import axios from "axios";
+import { CircleAlert, LoaderCircle } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import api from "../lib/api";
+import useAuth from "../hooks/useAuth";
+import AuthField from "../components/AuthField";
+import AuthLayout from "../components/AuthLayout";
 
 const SigninPage = () => {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [form, setForm] = useState({ username: "", password: "" });
+  const [errors, setErrors] = useState({});
+  const [submitError, setSubmitError] = useState("");
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate()
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { refreshSession } = useAuth();
+  const registrationMessage = location.state?.registrationMessage;
+  const destination =
+    typeof location.state?.from === "string" && location.state.from.startsWith("/")
+      ? location.state.from
+      : "/dashboard";
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const updateField = (field) => (event) => {
+    setForm((current) => ({ ...current, [field]: event.target.value }));
+    setErrors((current) => ({ ...current, [field]: "" }));
+    setSubmitError("");
+  };
+
+  const validate = () => {
+    const nextErrors = {};
+    if (!form.username.trim()) nextErrors.username = "Enter your username.";
+    if (!form.password) nextErrors.password = "Enter your password.";
+    return nextErrors;
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    const nextErrors = validate();
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      document.getElementById(`signin-${Object.keys(nextErrors)[0]}`)?.focus();
+      return;
+    }
+
     setLoading(true);
+    setSubmitError("");
 
     try {
-      const response = await axios.post("http://localhost:5000/signin", {
-        username: username,
-        password: password,
-      },{
-        withCredentials: true
+      await api.post("/signin", {
+        username: form.username.trim(),
+        password: form.password,
       });
-
-      console.log(response.data);
-      alert("signin successful!");
-      navigate("/dashboard")
-  
-      
-      setUsername("");
-      setPassword("");
-    } catch (err) {
-      console.error(err);
-      const errorMessage =
-        err.response?.data?.message || err.message || "Signup failed. Please try again.";
-      alert(errorMessage);
+      const sessionUser = await refreshSession();
+      if (!sessionUser) {
+        setSubmitError("Your account was verified, but the session could not be opened. Try again.");
+        return;
+      }
+      navigate(destination, { replace: true });
+    } catch (error) {
+      setSubmitError(
+        error.response?.data?.message ||
+          "We could not sign you in. Check your details and try again."
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex justify-center items-center min-h-screen w-screen bg-linear-to-br from-orange-50 via-amber-50 to-rose-50 font-sans">
-      <div className="bg-white rounded-3xl shadow-2xl flex overflow-hidden w-220 h-150">
-        <div className="flex-1 flex flex-col justify-center px-12 py-10">
-          <div className="mb-8">
-            <img onClick={() => navigate("/")} src={logoPng} alt="Logo" className="h-14 mb-6 -ml-5"/>
-            <h1 className="text-3xl font-bold text-gray-800">Login</h1>
-            <p className="text-gray-500 mt-2 text-sm">
-              Join us and start organizing your work
-            </p>
+    <AuthLayout
+      eyebrow="Welcome back"
+      title="Sign in to your workspace"
+      description="Pick up your projects, priorities, and team conversations right where you left them."
+      previewTitle="Keep the whole plan in view."
+      previewDescription="See priorities, owners, and progress together—then move work forward in a single gesture."
+      footer={
+        <p>
+          New to TaskFlow? <Link to="/signup">Create an account</Link>
+        </p>
+      }
+    >
+      <form className="tf-auth-form" onSubmit={handleSubmit} noValidate aria-busy={loading}>
+        {registrationMessage && (
+          <div className="tf-form-success" role="status">
+            {registrationMessage}
           </div>
+        )}
+        {submitError && (
+          <div className="tf-form-alert" role="alert">
+            <CircleAlert size={18} aria-hidden="true" />
+            <span>{submitError}</span>
+          </div>
+        )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Username
-              </label>
-              <input
-                type="text"
-                name="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter your username"
-                required
-                className="w-full h-11 px-4 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition"
-              />
-            </div>
+        <AuthField
+          id="signin-username"
+          label="Username"
+          name="username"
+          value={form.username}
+          onChange={updateField("username")}
+          error={errors.username}
+          autoComplete="username"
+          inputMode="text"
+          autoCapitalize="none"
+          spellCheck={false}
+          maxLength={40}
+          placeholder="Enter your username"
+          disabled={loading}
+          required
+        />
+        <AuthField
+          id="signin-password"
+          label="Password"
+          name="password"
+          type="password"
+          value={form.password}
+          onChange={updateField("password")}
+          error={errors.password}
+          autoComplete="current-password"
+          autoCapitalize="none"
+          placeholder="Enter your password"
+          disabled={loading}
+          required
+        />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Password
-              </label>
-              <input
-                type="password"
-                name="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                required
-                className="w-full h-11 px-4 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full h-11 mt-2 bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300 text-white font-semibold rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
-            >
-              {loading ? "Logging in..." : "Login"}
-            </button>
-          </form>
-
-          <p className="text-center text-sm text-gray-500 mt-6">
-            Does not have an account?{" "}
-            <span onClick={() => navigate("/signup")} className="text-orange-600 font-medium cursor-pointer hover:underline">
-              Signup
-            </span>
-          </p>
-        </div>
-
-        <div className="flex-1 relative">
-          <img
-            src={signupPng}
-            alt="Signup"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-linear-to-t from-black/30 to-transparent"></div>
-        </div>
-      </div>
-    </div>
+        <button className="tf-submit-button" type="submit" disabled={loading}>
+          {loading && <LoaderCircle className="tf-spinner" size={18} aria-hidden="true" />}
+          {loading ? "Signing you in…" : "Sign in"}
+        </button>
+      </form>
+    </AuthLayout>
   );
 };
 

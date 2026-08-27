@@ -1,25 +1,22 @@
-const mongoose = require("mongoose");
 const dotenv = require("dotenv");
-const dns = require("node:dns");
-
-dns.setServers([
-    '8.8.8.8',
-    '1.1.1.1'
+const mongoose = require("mongoose");
+const dns = require("dns")
+dns.setServers([ 
+  "8.8.8.8", "1.1.1.1"
 ])
+dotenv.config({ quiet: true });
 
-dotenv.config()
-const connectDb = async() => {
-    console.log(process.env.MONGO_URI);
-    try {
-        const conn = await mongoose.connect(process.env.MONGO_URI);
-        console.log("Database Connection Established ✅✅ " + conn.connection.host);
-    }catch(err){
-        console.error(err.message);
-        
-    }
+async function connectDb() {
+  if (!process.env.MONGO_URI) {
+    throw new Error("MONGO_URI is not configured");
+  }
 
-    
-    
+  const connection = await mongoose.connect(process.env.MONGO_URI, {
+    serverSelectionTimeoutMS: 10000,
+  });
 
+  console.log(`Database connection established (${connection.connection.host})`);
+  return connection;
 }
+
 module.exports = connectDb;

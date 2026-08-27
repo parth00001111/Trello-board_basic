@@ -1,219 +1,350 @@
-import { useState, useEffect } from "react"
-import { useNavigate, useParams } from "react-router-dom";
-import axios from "axios";
-import { House, Building2, Plus, ExternalLink } from "lucide-react"
-import logo from "../assets/logo.png";
+import { useEffect, useState } from "react";
+import {
+  ArrowLeft,
+  ArrowUpRight,
+  FolderKanban,
+  LayoutGrid,
+  Plus,
+  UserPlus,
+  Users,
+} from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import AppShell from "../components/AppShell";
+import AvatarStack from "../components/AvatarStack";
+import EmptyState from "../components/EmptyState";
+import InlineNotice from "../components/InlineNotice";
+import Modal from "../components/Modal";
+import PageLoader from "../components/PageLoader";
+import UserAvatar from "../components/UserAvatar";
+import api, { getErrorMessage } from "../lib/api";
+
+const formatDate = (value) => {
+  if (!value) return "Recently";
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(value));
+};
 
 const OrganizationPage = () => {
-    const { id } = useParams();
-    const navigate = useNavigate();
-    const [organization, setOrganization] = useState(null);
-    const [loading, setLoading] = useState(true);
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [organization, setOrganization] = useState(null);
+  const [boards, setBoards] = useState([]);
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [boardOpen, setBoardOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [boardTitle, setBoardTitle] = useState("");
+  const [memberUsername, setMemberUsername] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [success, setSuccess] = useState("");
 
-    const [boardTitle, setBoardTitle] = useState("");
-    const [boards, setBoards] = useState([]);
-    const [members, setMembers] = useState([]);
-    const [creating, setCreating] = useState(false);
-    const [error, setError] = useState("");
+  useEffect(() => {
+    let active = true;
 
-   const fullName = decodeURIComponent(
-    document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("username="))
-      ?.split("=")[1] || ""
-  );
-
-  
-  const firstName = fullName.split(" ")[0];
-
-    const fetchOrganization = async () => {
-        try {
-            const res = await axios.get(`http://localhost:5000/organization/${id}`, {
-                withCredentials: true
-            });
-            setOrganization(res.data.organization);
-        } catch (err) {
-            console.log(err.message);
-        } finally {
-            setLoading(false);
+    Promise.all([
+      api.get(`/organization/${id}`),
+      api.get("/boards", { params: { organizationId: id } }),
+      api.get("/members", { params: { organizationId: id } }),
+    ])
+      .then(([organizationResponse, boardsResponse, membersResponse]) => {
+        if (!active) return;
+        setOrganization(organizationResponse.data.organization);
+        setBoards(boardsResponse.data.Boards || boardsResponse.data.boards || []);
+        setMembers(membersResponse.data.members || []);
+      })
+      .catch((error) => {
+        if (active) {
+          setLoadError(getErrorMessage(error, "We couldn’t open this workspace."));
         }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
     };
+  }, [id]);
 
-    const fetchBoards = async () => {
-        try {
-            const res = await axios.get(`http://localhost:5000/boards`, {
-                params: { organizationId: id },
-                withCredentials: true
-            });
-            setBoards(res.data.Boards);
-        } catch (err) {
-            console.log(err.message);
-        }
-    };
+  const closeModals = () => {
+    if (submitting) return;
+    setBoardOpen(false);
+    setInviteOpen(false);
+    setFormError("");
+  };
 
-    const fetchMembers = async () => {
-        try {
-            const res = await axios.get(`http://localhost:5000/members`, {
-                params: { organizationId: id },
-                withCredentials: true
-            });
-            setMembers(res.data.members);
-        } catch (err) {
-            console.log(err.message);
-        }
-    };
-
-    useEffect(() => {
-        fetchOrganization();
-        fetchBoards();
-        fetchMembers();
-    }, [id]);
-
-    const handleCreateBoard = async (e) => {
-        e.preventDefault();
-        setCreating(true);
-        try {
-            await axios.post(`http://localhost:5000/board`, {
-                title: boardTitle,
-                organizationId: id
-            }, {
-                withCredentials: true
-            });
-            setBoardTitle("");
-            fetchBoards();
-        } catch (err) {
-            setError(err.response?.data?.message || err.message);
-        } finally {
-            setCreating(false);
-        }
-    };
-
-    const logout = async () => {
-        try {
-            await axios.post(`http://localhost:5000/logout`, {}, {
-                withCredentials: true
-            });
-            navigate("/signin");
-        } catch (err) {
-            console.log(err.message);
-        }
-    };
-
-    const formatDate = (dateString) => {
-        if (!dateString) return "";
-        return new Date(dateString).toLocaleDateString("en-US", {
-            month: "long",
-            day: "numeric",
-            year: "numeric"
-        });
-    };
-
-    if (loading) {
-        return (
-            <div className="min-h-screen w-screen bg-linear-to-br from-orange-50 via-amber-50 to-rose-50 flex items-center justify-center">
-                <p className="text-2xl text-gray-500">Loading...</p>
-            </div>
-        );
+  const createBoard = async (event) => {
+    event.preventDefault();
+    const cleanTitle = boardTitle.trim();
+    if (cleanTitle.length < 2) {
+      setFormError("Board name needs at least 2 characters.");
+      return;
     }
 
+    setSubmitting(true);
+    setFormError("");
+    try {
+      const { data } = await api.post("/board", {
+        title: cleanTitle,
+        organizationId: id,
+      });
+      const boardId = data.board?._id || data.BoardId;
+      setBoardTitle("");
+      setBoardOpen(false);
+
+      if (boardId) {
+        navigate(`/board/${boardId}`);
+      } else {
+        const response = await api.get("/boards", { params: { organizationId: id } });
+        setBoards(response.data.Boards || response.data.boards || []);
+      }
+    } catch (error) {
+      setFormError(getErrorMessage(error, "We couldn’t create this board."));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const inviteMember = async (event) => {
+    event.preventDefault();
+    const username = memberUsername.trim();
+    if (username.length < 3) {
+      setFormError("Enter a valid username.");
+      return;
+    }
+
+    setSubmitting(true);
+    setFormError("");
+    try {
+      await api.post("/add-member-to-organization", {
+        organizationId: id,
+        memberUsername: username,
+      });
+      const response = await api.get("/members", { params: { organizationId: id } });
+      setMembers(response.data.members || []);
+      setMemberUsername("");
+      setInviteOpen(false);
+      setSuccess(`${username} was added to the workspace.`);
+      window.setTimeout(() => setSuccess(""), 4000);
+    } catch (error) {
+      setFormError(getErrorMessage(error, "We couldn’t add this teammate."));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) {
     return (
-        <div className="min-h-screen w-screen bg-linear-to-br from-orange-50 via-amber-50 to-rose-50 font-sans">
-            {/* navbar */}
-          <div className="flex justify-between items-center h-25 bg-white shadow-md px-5">
-            <div className="flex items-center justify-center">
-             <img onClick={() => navigate("/")} className="h-20 w-30 cursor-pointer" src={logo} alt="TaskFlow Logo"/>
-              <h1 className="text-4xl font-bold mt-1">TaskFlow</h1>
-              <div className="flex items-center gap-2 ml-10 mt-3 cursor-pointer" onClick={() => navigate("/dashboard")}>
-              <House className="text-gray-600 h-7 w-7" />
-              <p className="text-xl text-gray-600">Dashboard</p>
-              </div>
-            </div>
+      <AppShell>
+        <PageLoader label="Loading workspace" cards={4} />
+      </AppShell>
+    );
+  }
 
-            <div className="flex items-center gap-2">
-                <Building2 className="text-orange-500 h-7 w-7" />
-                <h1 className="text-xl font-semibold">{organization?.title}</h1>
-            </div>
+  if (loadError || !organization) {
+    return (
+      <AppShell>
+        <EmptyState
+          icon={FolderKanban}
+          title="This workspace isn’t available"
+          description={loadError || "It may have moved, or you may not have access."}
+          action={
+            <Link className="btn btn-secondary" to="/dashboard">
+              <ArrowLeft size={17} /> Back to workspaces
+            </Link>
+          }
+        />
+      </AppShell>
+    );
+  }
 
-            <div className="flex items-center gap-4">
-              <p className="font-medium text-2xl">Hi {firstName},</p>
-              <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center">
-                <p className="text-orange-500 font-semibold text-lg">
-                  {firstName?.charAt(0).toUpperCase()}
-                </p>
-              </div>
-              <button onClick={logout} className="bg-orange-500 h-15 w-35 rounded-2xl text-xl text-white hover:bg-orange-600">Logout</button>
-            </div>
-          </div>
+  return (
+    <AppShell>
+      <nav className="breadcrumbs" aria-label="Breadcrumb">
+        <Link to="/dashboard">Workspaces</Link>
+        <span aria-hidden="true">/</span>
+        <span aria-current="page">{organization.title}</span>
+      </nav>
 
-          {/* main section */}
-          <div className="flex">
+      <section className="organization-hero">
+        <div className="organization-monogram" aria-hidden="true">
+          {organization.title?.charAt(0).toUpperCase()}
+        </div>
+        <div className="organization-heading-copy">
+          <p className="eyebrow">Team workspace</p>
+          <h1>{organization.title}</h1>
+          <p>{organization.description || "A shared place to plan, build and finish the work."}</p>
+        </div>
+        <div className="organization-hero-actions">
+          <AvatarStack members={members} limit={5} />
+          {organization.role === "admin" && (
+            <button className="btn btn-secondary" type="button" onClick={() => setInviteOpen(true)}>
+              <UserPlus size={17} /> Invite
+            </button>
+          )}
+          <button className="btn btn-primary" type="button" onClick={() => setBoardOpen(true)}>
+            <Plus size={17} /> New board
+          </button>
+        </div>
+      </section>
 
-            {/* Create Board */}
-            <div className="w-120 bg-white m-20 shadow-xl rounded-3xl flex flex-col px-10 py-8">
-              <h1 className="text-4xl font-bold">Create Board</h1>
-              <p className="text-gray-500 text-xl mt-3">Create a new board to organize tasks and collaborate with your team.</p>
+      <InlineNotice message={success} tone="success" />
 
-              <form className="w-full mt-6 flex flex-col gap-2" onSubmit={handleCreateBoard}>
-                <label className="text-3xl font-bold">Board Title</label>
-                <input
-                  className="w-full  h-12 border border-gray-300 rounded-xl px-4 text-xl focus:outline-none focus:border-orange-500"
-                  type="text"
-                  placeholder="Enter board title (e.g. Website Redesign)"
-                  value={boardTitle}
-                  onChange={(e) => setBoardTitle(e.target.value)}
-                  required
-                />
-
-                <button type="submit" disabled={creating} className="flex bg-orange-500 hover:bg-orange-600 gap-2 h-14 justify-center items-center rounded-xl w-full mt-8 cursor-pointer disabled:opacity-60">
-                  <Plus className="text-white h-6 w-6" />
-                  <p className="text-white text-xl">{creating ? "Creating..." : "Create Board"}</p>
-                </button>
-                {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
-              </form>
-            </div>
-
-            {/* Boards list */}
-            <div className="flex-1 m-20 ml-0">
-              <h1 className="text-5xl font-bold">Boards</h1>
-              <p className="text-gray-500 mt-2 text-xl">Organize your work into boards and get things done.</p>
-
-              {/* Members row */}
-              <div className="flex items-center gap-3 mt-5 flex-wrap">
-                {members.map((m) => (
-                  <div key={m._id} className="flex items-center gap-2 bg-white shadow-sm px-3 py-2 rounded-full">
-                    <div className="h-7 w-7 rounded-full bg-orange-100 flex items-center justify-center">
-                      <p className="text-orange-500 font-semibold text-sm">
-                        {m.username?.charAt(0).toUpperCase()}
-                      </p>
-                    </div>
-                    <p className="text-sm text-gray-700">{m.username}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-2 gap-6 mt-6">
-                {boards.map((board) => (
-                  <div key={board._id} className="bg-white shadow-md rounded-2xl p-6">
-                    <h1 className="text-3xl font-bold">{board.title}</h1>
-                    <div className="flex justify-between items-center mt-4">
-                      <p className="text-gray-500 text-lg">
-                        Created by {board.createdBy?.username} · {formatDate(board.createdAt)}
-                      </p>
-                      <button
-                        onClick={() => navigate(`/board/${board._id}`)}
-                        className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-xl flex items-center gap-2"
-                      >
-                        Open <ExternalLink className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
+      <section className="organization-summary" aria-label="Workspace summary">
+        <div>
+          <span><LayoutGrid size={18} /></span>
+          <strong>{boards.length}</strong>
+          <p>{boards.length === 1 ? "Active board" : "Active boards"}</p>
+        </div>
+        <div>
+          <span><Users size={18} /></span>
+          <strong>{members.length}</strong>
+          <p>{members.length === 1 ? "Team member" : "Team members"}</p>
+        </div>
+        <div className="organization-members-list">
+          <p>People in this workspace</p>
+          <div>
+            {members.slice(0, 6).map((member) => (
+              <span key={member._id || member.id}>
+                <UserAvatar name={member.username} />
+                {member.username}
+              </span>
+            ))}
+            {!members.length && <span>Invite your first teammate</span>}
           </div>
         </div>
-    );
-}
+      </section>
 
-export default OrganizationPage
+      <section className="content-section organization-boards-section">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Boards</p>
+            <h2>Plan the work visually</h2>
+            <p>Each board turns a stream of tasks into a clear, shared workflow.</p>
+          </div>
+          <span className="section-count">{boards.length}</span>
+        </div>
+
+        {boards.length ? (
+          <div className="board-grid">
+            {boards.map((board, index) => (
+              <article className="board-card" key={board._id}>
+                <button
+                  type="button"
+                  className={`board-card-preview board-preview-${(index % 4) + 1}`}
+                  onClick={() => navigate(`/board/${board._id}`)}
+                  aria-label={`Open ${board.title}`}
+                >
+                  {[3, 2, 2].map((cardCount, columnIndex) => (
+                    <span className="mini-column" key={columnIndex} aria-hidden="true">
+                      <i />
+                      {Array.from({ length: cardCount }, (_, cardIndex) => (
+                        <b key={cardIndex} />
+                      ))}
+                    </span>
+                  ))}
+                </button>
+                <div className="board-card-body">
+                  <div>
+                    <h3>{board.title}</h3>
+                    <p>
+                      Created by {board.createdBy?.username || "your team"} · {formatDate(board.createdAt)}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="board-open-link"
+                    onClick={() => navigate(`/board/${board._id}`)}
+                    aria-label={`Open ${board.title}`}
+                  >
+                    <ArrowUpRight size={18} />
+                  </button>
+                </div>
+              </article>
+            ))}
+
+            <button className="board-card board-create-card" type="button" onClick={() => setBoardOpen(true)}>
+              <span><Plus size={21} /></span>
+              <strong>Create another board</strong>
+              <small>Start with a clean workflow</small>
+            </button>
+          </div>
+        ) : (
+          <EmptyState
+            icon={LayoutGrid}
+            title="Turn your plan into a board"
+            description="Create a board, add tasks and move them from backlog all the way to done."
+            action={
+              <button className="btn btn-primary" type="button" onClick={() => setBoardOpen(true)}>
+                <Plus size={17} /> Create your first board
+              </button>
+            }
+          />
+        )}
+      </section>
+
+      <Modal open={boardOpen} onClose={closeModals} title="Create a new board" eyebrow={organization.title}>
+        <form className="modal-form" onSubmit={createBoard}>
+          <div className="field">
+            <label className="field-label" htmlFor="board-title">Board name</label>
+            <input
+              className="input"
+              id="board-title"
+              value={boardTitle}
+              onChange={(event) => setBoardTitle(event.target.value)}
+              placeholder="e.g. Website launch"
+              maxLength={100}
+              autoFocus
+              required
+            />
+            <span className="field-hint">A focused name helps everyone find the right work.</span>
+          </div>
+          <InlineNotice message={formError} />
+          <div className="modal-actions">
+            <button className="btn btn-secondary" type="button" onClick={closeModals}>Cancel</button>
+            <button className="btn btn-primary" type="submit" disabled={submitting}>
+              {submitting && <span className="spinner" aria-hidden="true" />}
+              {submitting ? "Creating…" : "Create board"}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {organization.role === "admin" && (
+        <Modal open={inviteOpen} onClose={closeModals} title="Invite a teammate" eyebrow="Grow the workspace">
+          <form className="modal-form" onSubmit={inviteMember}>
+          <div className="field">
+            <label className="field-label" htmlFor="member-username">TaskFlow username</label>
+            <input
+              className="input"
+              id="member-username"
+              value={memberUsername}
+              onChange={(event) => setMemberUsername(event.target.value)}
+              placeholder="e.g. anika"
+              autoComplete="off"
+              autoFocus
+              required
+            />
+            <span className="field-hint">They need an existing TaskFlow account.</span>
+          </div>
+          <InlineNotice message={formError} />
+          <div className="modal-actions">
+            <button className="btn btn-secondary" type="button" onClick={closeModals}>Cancel</button>
+            <button className="btn btn-primary" type="submit" disabled={submitting}>
+              {submitting && <span className="spinner" aria-hidden="true" />}
+              {submitting ? "Inviting…" : "Add to workspace"}
+            </button>
+          </div>
+          </form>
+        </Modal>
+      )}
+    </AppShell>
+  );
+};
+
+export default OrganizationPage;
