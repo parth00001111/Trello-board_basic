@@ -244,6 +244,7 @@ const Dashboard = () => {
         title="Create a workspace"
         eyebrow="A home for the work"
         dismissible={!creating}
+        initialFocusSelector="#workspace-title"
       >
         <form className="modal-form" onSubmit={createOrganization} aria-busy={creating}>
           <div className="field">
@@ -256,6 +257,7 @@ const Dashboard = () => {
               placeholder="e.g. Product studio"
               maxLength={120}
               autoFocus
+              disabled={creating}
               required
             />
           </div>
@@ -271,6 +273,7 @@ const Dashboard = () => {
               onChange={(event) => setDescription(event.target.value)}
               placeholder="What will your team organize here?"
               maxLength={500}
+              disabled={creating}
             />
           </div>
           <InlineNotice message={formError} />

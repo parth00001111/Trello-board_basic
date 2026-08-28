@@ -620,6 +620,7 @@ app.post(
       { adminOnly: true }
     );
     const memberUsername = requireString(req.body.memberUsername, "memberUsername", {
+      min: 2,
       max: 80,
     });
     const memberUser = await userModel.findOne({ username: memberUsername }).lean();
@@ -718,7 +719,7 @@ app.delete(
     const memberUsername = requireString(
       req.body.memberUsername || req.query.memberUsername,
       "memberUsername",
-      { max: 80 }
+      { min: 2, max: 80 }
     );
     const organization = await requireOrganizationAccess(organizationId, req.userId, {
       adminOnly: true,
@@ -736,8 +737,19 @@ app.delete(
       { _id: organization._id },
       { $pull: { members: memberUser._id } }
     );
+    const boardIds = await boardsModel.distinct("_id", {
+      organizationId: organization._id,
+    });
+    const assignmentResult = boardIds.length
+      ? await issueModel.updateMany(
+          { boardId: { $in: boardIds }, assignedTo: memberUser._id },
+          { $set: { assignedTo: null } }
+        )
+      : { modifiedCount: 0 };
+
     return res.json({
       message: result.modifiedCount ? "Member removed" : "User was not a member",
+      unassignedIssues: assignmentResult.modifiedCount,
     });
   })
 );

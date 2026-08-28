@@ -508,6 +508,7 @@
 .modal {
   width: min(calc(100% - 28px), 540px);
   max-height: min(90vh, 780px);
+  margin: auto;
   overflow: visible;
   border: 0;
   border-radius: 22px;
@@ -586,6 +587,13 @@
 
 .modal-actions-split > div {
   display: flex;
+  gap: 9px;
+}
+
+.empty-state-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   gap: 9px;
 }
 
@@ -856,6 +864,17 @@
   gap: 9px;
 }
 
+.workspace-load-warning {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.workspace-load-warning .form-error {
+  flex: 1;
+}
+
 .organization-summary {
   display: grid;
   margin: 18px 0 52px;
@@ -923,6 +942,148 @@
   background: var(--ink-100);
   font-size: 0.72rem;
   font-weight: 600;
+}
+
+.team-manager {
+  display: grid;
+  gap: 22px;
+}
+
+.team-member-section {
+  display: grid;
+  gap: 12px;
+}
+
+.team-section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.team-section-heading h3 {
+  margin: 0;
+  color: var(--ink-900);
+  font-size: 0.94rem;
+  font-weight: 710;
+}
+
+.team-section-heading p {
+  margin: 3px 0 0;
+  color: var(--ink-500);
+  font-size: 0.77rem;
+  line-height: 1.45;
+}
+
+.team-section-heading > span {
+  display: inline-flex;
+  min-width: 30px;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  color: var(--brand-700);
+  background: var(--brand-100);
+  font-size: 0.78rem;
+  font-weight: 720;
+}
+
+.team-member-list {
+  display: grid;
+  max-height: 252px;
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--ink-200);
+  border-radius: 14px;
+  padding: 0;
+}
+
+.team-member-list li {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 12px;
+}
+
+.team-member-list li + li {
+  border-top: 1px solid var(--ink-100);
+}
+
+.team-member-copy {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: 1px;
+}
+
+.team-member-copy strong,
+.team-member-copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.team-member-copy strong {
+  color: var(--ink-900);
+  font-size: 0.84rem;
+}
+
+.team-member-copy span {
+  color: var(--ink-500);
+  font-size: 0.72rem;
+}
+
+.team-admin-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 999px;
+  padding: 6px 9px;
+  color: var(--green-700);
+  background: var(--green-100);
+  font-size: 0.7rem;
+  font-weight: 690;
+}
+
+.team-remove-button {
+  width: 36px;
+  min-height: 36px;
+  color: var(--red-700);
+}
+
+.team-remove-confirmation {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.team-remove-confirmation > span {
+  color: var(--red-700);
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.team-remove-confirmation .btn {
+  min-height: 32px;
+  padding-inline: 9px;
+  font-size: 0.72rem;
+}
+
+.team-invite-form {
+  border-top: 1px solid var(--ink-100);
+  padding-top: 20px;
+}
+
+.team-invite-row {
+  display: grid;
+  align-items: end;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.team-invite-button {
+  min-height: 46px;
 }
 
 .board-grid {
@@ -1667,6 +1828,23 @@
     margin-bottom: 40px;
   }
 
+  .workspace-load-warning {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .workspace-load-warning .btn {
+    width: 100%;
+  }
+
+  .team-invite-row {
+    grid-template-columns: 1fr;
+  }
+
+  .team-invite-button {
+    width: 100%;
+  }
+
   .board-toolbar {
     align-items: flex-start;
     border-radius: 14px;
@@ -1779,6 +1957,32 @@
 
   .modal-panel {
     padding: 20px;
+  }
+
+  .empty-state-actions {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .empty-state-actions .btn {
+    width: 100%;
+  }
+
+  .team-member-list li {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .team-admin-badge {
+    align-self: center;
+  }
+
+  .team-remove-confirmation {
+    width: 100%;
+    justify-content: flex-end;
+    border-top: 1px solid var(--ink-100);
+    padding-top: 9px;
   }
 
   .modal-actions:not(.modal-actions-split),

@@ -6,7 +6,7 @@ TaskFlow is a responsive Trello-style project workspace built with React, Expres
 
 Requirements: Node.js 20.19+ (or 22.12+) and a MongoDB connection string.
 
-1. Copy `.env.example` to `.env` and fill in `MONGO_URI` and a long random `JWT_SECRET`.
+1. Copy `backend/.env.example` to `backend/.env` and fill in `MONGO_URI` and a long random `JWT_SECRET`.
 2. Copy `frontend/.env.example` to `frontend/.env` if the API is not running at `http://localhost:5000`.
 3. Install dependencies in both package roots:
 
@@ -27,6 +27,7 @@ The web app runs at `http://localhost:5173` and the API defaults to `http://loca
 ## Verification
 
 ```powershell
+npm.cmd test
 npm.cmd run lint:web
 npm.cmd run build:web
 Get-ChildItem backend/src -Filter *.js | ForEach-Object { node --check $_.FullName }
@@ -34,4 +35,4 @@ Get-ChildItem backend/src -Filter *.js | ForEach-Object { node --check $_.FullNa
 
 ## Workflow
 
-Tasks move between Backlog, To do, In progress, Review, and Done. Reordering is optimistic in the UI and persisted by the API; stale concurrent moves are detected and refreshed.
+Tasks move between Backlog, To do, In progress, Review, and Done. Reordering is optimistic in the UI and persisted by the API. If tasks were added or removed elsewhere, stale moves are rejected and the current board is restored. Workspace admins can also manage membership; removing a member safely unassigns their existing tasks.

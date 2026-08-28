@@ -1,12 +1,27 @@
 const dotenv = require("dotenv");
 const mongoose = require("mongoose");
 const path = require("node:path");
-const dns = require("dns")
+const dns = require("dns"); 
+
 dns.setServers([
-  "8.8.8.8", "1.1.1.1"
+  "1.1.1.1", "8.8.8.8"
 ])
 
 dotenv.config({ path: path.resolve(__dirname, "../.env"), quiet: true });
+
+const dnsSetting = process.env.DNS_SERVERS?.trim();
+const usesSrvConnection = process.env.MONGO_URI?.startsWith("mongodb+srv://");
+
+if (usesSrvConnection && dnsSetting?.toLowerCase() !== "system") {
+  const dns = require("node:dns");
+  const configuredDnsServers = dnsSetting
+    ? dnsSetting.split(",").map((server) => server.trim()).filter(Boolean)
+    : ["8.8.8.8", "1.1.1.1"];
+
+  if (configuredDnsServers.length) {
+    dns.setServers(configuredDnsServers);
+  }
+}
 
 async function connectDb() {
   if (!process.env.MONGO_URI) {

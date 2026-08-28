@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { DragDropContext } from "@hello-pangea/dnd";
 import {
   ArrowLeft,
@@ -11,7 +11,6 @@ import {
 import { Link, useParams } from "react-router-dom";
 import AppShell from "../components/AppShell";
 import AvatarStack from "../components/AvatarStack";
-import InlineNotice from "../components/InlineNotice";
 import KanbanColumn from "../components/KanbanColumn";
 import PageLoader from "../components/PageLoader";
 import TaskEditorModal from "../components/TaskEditorModal";
@@ -46,7 +45,10 @@ const TaskPage = () => {
   const [members, setMembers] = useState([]);
   const [issues, setIssues] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [settledId, setSettledId] = useState("");
   const [loadError, setLoadError] = useState("");
+  const [loadErrorStatus, setLoadErrorStatus] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorMode, setEditorMode] = useState("create");
   const [activeIssue, setActiveIssue] = useState(null);
@@ -56,6 +58,8 @@ const TaskPage = () => {
   const [boardNotice, setBoardNotice] = useState("");
   const [savingOrder, setSavingOrder] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const boardNoticeTimer = useRef(null);
+  const addTaskButton = useRef(null);
 
   useEffect(() => {
     let active = true;
@@ -67,20 +71,59 @@ const TaskPage = () => {
         setOrganization(boardResponse.data.organization);
         setMembers(boardResponse.data.members || []);
         setIssues(issueResponse.data.issues || []);
+        setLoadError("");
+        setLoadErrorStatus(null);
       })
       .catch((error) => {
         if (active) {
+          setBoard(null);
+          setOrganization(null);
+          setMembers([]);
+          setIssues([]);
           setLoadError(getErrorMessage(error, "We couldn’t open this board."));
+          setLoadErrorStatus(error.response?.status || null);
         }
       })
       .finally(() => {
-        if (active) setLoading(false);
+        if (active) {
+          setSettledId(id);
+          setLoading(false);
+        }
       });
 
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, reloadKey]);
+
+  useEffect(
+    () => () => {
+      if (boardNoticeTimer.current) window.clearTimeout(boardNoticeTimer.current);
+    },
+    [],
+  );
+
+  const showBoardNotice = (message, duration = 3000) => {
+    if (boardNoticeTimer.current) window.clearTimeout(boardNoticeTimer.current);
+    setBoardNotice(message);
+    boardNoticeTimer.current = window.setTimeout(() => {
+      setBoardNotice("");
+      boardNoticeTimer.current = null;
+    }, duration);
+  };
+
+  const clearBoardNotice = () => {
+    if (boardNoticeTimer.current) window.clearTimeout(boardNoticeTimer.current);
+    boardNoticeTimer.current = null;
+    setBoardNotice("");
+  };
+
+  const retryLoad = () => {
+    setLoading(true);
+    setLoadError("");
+    setLoadErrorStatus(null);
+    setReloadKey((current) => current + 1);
+  };
 
   const groups = useMemo(() => groupIssues(issues), [issues]);
   const completed = groups.done.length;
@@ -149,15 +192,14 @@ const TaskPage = () => {
         setIssues((current) =>
           current.map((issue) => (issue._id === activeIssue._id ? data.issue : issue)),
         );
-        setBoardNotice("Task updated.");
+        showBoardNotice("Task updated.");
       } else {
         const { data } = await api.post("/issue", payload);
         setIssues((current) => [...current, data.issue]);
-        setBoardNotice("Task added to the board.");
+        showBoardNotice("Task added to the board.");
       }
       setEditorOpen(false);
       setConfirmingDelete(false);
-      window.setTimeout(() => setBoardNotice(""), 3000);
     } catch (error) {
       setEditorError(getErrorMessage(error, "We couldn’t save this task."));
     } finally {
@@ -174,8 +216,10 @@ const TaskPage = () => {
       setIssues((current) => current.filter((issue) => issue._id !== activeIssue._id));
       setEditorOpen(false);
       setConfirmingDelete(false);
-      setBoardNotice("Task deleted.");
-      window.setTimeout(() => setBoardNotice(""), 3000);
+      showBoardNotice("Task deleted.");
+      window.requestAnimationFrame(() => {
+        addTaskButton.current?.focus({ preventScroll: true });
+      });
     } catch (error) {
       setEditorError(getErrorMessage(error, "We couldn’t delete this task."));
     } finally {
@@ -204,35 +248,37 @@ const TaskPage = () => {
     const optimisticIssues = flattenGroups(nextGroups);
     setIssues(optimisticIssues);
     setSavingOrder(true);
-    setBoardNotice("");
+    clearBoardNotice();
 
     try {
       const { data } = await api.patch(`/boards/${id}/issues/reorder`, {
         groups: serializeGroups(nextGroups),
       });
       setIssues(data.issues || optimisticIssues);
-      setBoardNotice("Board order saved.");
-      window.setTimeout(() => setBoardNotice(""), 2200);
+      showBoardNotice("Board order saved.", 2200);
     } catch (error) {
       if (error.response?.status === 409) {
         try {
           const { data } = await api.get(`/boards/${id}/issues`);
           setIssues(data.issues || previousIssues);
-          setBoardNotice("The board changed elsewhere, so the latest order was restored.");
+          showBoardNotice("The board changed elsewhere, so the latest order was restored.", 5000);
         } catch {
           setIssues(previousIssues);
-          setBoardNotice("The board changed elsewhere. Refresh before moving another task.");
+          showBoardNotice("The board changed elsewhere. Refresh before moving another task.", 5000);
         }
       } else {
         setIssues(previousIssues);
-        setBoardNotice(getErrorMessage(error, "That move couldn’t be saved, so it was undone."));
+        showBoardNotice(
+          getErrorMessage(error, "That move couldn’t be saved, so it was undone."),
+          5000,
+        );
       }
     } finally {
       setSavingOrder(false);
     }
   };
 
-  if (loading) {
+  if (loading || settledId !== id) {
     return (
       <AppShell wide>
         <PageLoader label="Loading board" cards={5} />
@@ -242,15 +288,23 @@ const TaskPage = () => {
 
   if (loadError || !board) {
     const fallbackPath = organization?._id ? `/organizations/${organization._id}` : "/dashboard";
+    const canRetry = ![400, 403, 404].includes(loadErrorStatus);
     return (
       <AppShell>
         <section className="empty-state">
           <span className="empty-state-icon"><CircleDotDashed size={22} /></span>
           <h2>This board isn’t available</h2>
           <p>{loadError || "It may have moved, or you may not have access."}</p>
-          <Link className="btn btn-secondary" to={fallbackPath}>
-            <ArrowLeft size={17} /> Go back
-          </Link>
+          <div className="empty-state-actions">
+            <Link className="btn btn-secondary" to={fallbackPath}>
+              <ArrowLeft size={17} /> Go back
+            </Link>
+            {canRetry && (
+              <button className="btn btn-primary" type="button" onClick={retryLoad}>
+                <RefreshCw size={17} /> Try again
+              </button>
+            )}
+          </div>
         </section>
       </AppShell>
     );
@@ -284,7 +338,12 @@ const TaskPage = () => {
             <span className="progress-track"><i style={{ width: `${completion}%` }} /></span>
           </div>
           <AvatarStack members={members} limit={5} />
-          <button className="btn btn-primary" type="button" onClick={() => openCreate("todo")}>
+          <button
+            ref={addTaskButton}
+            className="btn btn-primary"
+            type="button"
+            onClick={() => openCreate("todo")}
+          >
             <Plus size={18} /> Add task
           </button>
         </div>
