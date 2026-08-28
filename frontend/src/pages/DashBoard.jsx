@@ -5,6 +5,7 @@ import {
   CalendarDays,
   FolderKanban,
   Plus,
+  RefreshCw,
   Sparkles,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -38,6 +39,7 @@ const Dashboard = () => {
   const [organizations, setOrganizations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
   const [createOpen, setCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [formError, setFormError] = useState("");
@@ -50,7 +52,10 @@ const Dashboard = () => {
     api
       .get("/organizations")
       .then(({ data }) => {
-        if (active) setOrganizations(data.organizations || []);
+        if (active) {
+          setOrganizations(data.organizations || []);
+          setLoadError("");
+        }
       })
       .catch((error) => {
         if (active) {
@@ -64,7 +69,13 @@ const Dashboard = () => {
     return () => {
       active = false;
     };
-  }, []);
+  }, [reloadKey]);
+
+  const retryLoad = () => {
+    setLoading(true);
+    setLoadError("");
+    setReloadKey((current) => current + 1);
+  };
 
   const firstName = useMemo(
     () => user?.username?.trim().split(/\s+/)[0] || "there",
@@ -134,14 +145,14 @@ const Dashboard = () => {
         <article className="overview-card overview-card-accent">
           <span className="overview-icon"><BriefcaseBusiness size={20} /></span>
           <div>
-            <strong>{organizations.length}</strong>
+            <strong>{loading ? "—" : organizations.length}</strong>
             <span>{organizations.length === 1 ? "Workspace" : "Workspaces"}</span>
           </div>
         </article>
         <article className="overview-card">
           <span className="overview-icon overview-icon-blue"><FolderKanban size={20} /></span>
           <div>
-            <strong>{organizations.length ? "Ready" : "Start"}</strong>
+            <strong>{loading ? "Checking" : organizations.length ? "Ready" : "Start"}</strong>
             <span>Planning status</span>
           </div>
         </article>
@@ -170,10 +181,19 @@ const Dashboard = () => {
           <span className="section-count">{organizations.length}</span>
         </div>
 
-        <InlineNotice message={loadError} />
-
         {loading ? (
           <PageLoader label="Loading workspaces" />
+        ) : loadError ? (
+          <EmptyState
+            icon={RefreshCw}
+            title="We couldn’t load your workspaces"
+            description={loadError}
+            action={
+              <button className="btn btn-primary" type="button" onClick={retryLoad}>
+                <RefreshCw size={17} /> Try again
+              </button>
+            }
+          />
         ) : organizations.length ? (
           <div className="workspace-grid">
             {organizations.map((organization, index) => (
@@ -223,8 +243,9 @@ const Dashboard = () => {
         onClose={closeCreate}
         title="Create a workspace"
         eyebrow="A home for the work"
+        dismissible={!creating}
       >
-        <form className="modal-form" onSubmit={createOrganization}>
+        <form className="modal-form" onSubmit={createOrganization} aria-busy={creating}>
           <div className="field">
             <label className="field-label" htmlFor="workspace-title">Workspace name</label>
             <input
@@ -233,7 +254,7 @@ const Dashboard = () => {
               value={title}
               onChange={(event) => setTitle(event.target.value)}
               placeholder="e.g. Product studio"
-              maxLength={80}
+              maxLength={120}
               autoFocus
               required
             />
@@ -241,7 +262,7 @@ const Dashboard = () => {
           <div className="field">
             <div className="field-label-row">
               <label className="field-label" htmlFor="workspace-description">Description</label>
-              <span>{description.length}/300</span>
+              <span>{description.length}/500</span>
             </div>
             <textarea
               className="textarea"
@@ -249,12 +270,17 @@ const Dashboard = () => {
               value={description}
               onChange={(event) => setDescription(event.target.value)}
               placeholder="What will your team organize here?"
-              maxLength={300}
+              maxLength={500}
             />
           </div>
           <InlineNotice message={formError} />
           <div className="modal-actions">
-            <button className="btn btn-secondary" type="button" onClick={closeCreate}>
+            <button
+              className="btn btn-secondary"
+              type="button"
+              onClick={closeCreate}
+              disabled={creating}
+            >
               Cancel
             </button>
             <button className="btn btn-primary" type="submit" disabled={creating}>

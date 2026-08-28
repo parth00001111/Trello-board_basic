@@ -1,6 +1,8 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import AuthProvider from "./context/AuthProvider";
+import GuestRoute from "./components/GuestRoute";
+import NavigationEffects from "./components/NavigationEffects";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const LandingPage = lazy(() => import("./pages/LandingPage"));
@@ -12,7 +14,7 @@ const TaskPage = lazy(() => import("./pages/TaskPage"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 
 const RouteFallback = () => (
-  <main className="route-loader" aria-busy="true" aria-label="Loading page">
+  <main className="route-loader" id="main-content" aria-busy="true" aria-label="Loading page">
     <div className="route-loader-mark" aria-hidden="true">
       <span />
       <span />
@@ -25,11 +27,15 @@ const RouteFallback = () => (
 const App = () => (
   <BrowserRouter>
     <AuthProvider>
+      <a className="skip-link" href="#main-content">Skip to main content</a>
+      <NavigationEffects />
       <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/signup" element={<SignupPage />} />
-          <Route path="/signin" element={<SigninPage />} />
+          <Route element={<GuestRoute />}>
+            <Route path="/signup" element={<SignupPage />} />
+            <Route path="/signin" element={<SigninPage />} />
+          </Route>
 
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<DashBoard />} />

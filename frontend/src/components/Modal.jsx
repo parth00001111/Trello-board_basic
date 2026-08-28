@@ -1,7 +1,15 @@
 import { useEffect, useId, useRef } from "react";
 import { X } from "lucide-react";
 
-const Modal = ({ open, onClose, title, eyebrow, children, size = "md" }) => {
+const Modal = ({
+  open,
+  onClose,
+  title,
+  eyebrow,
+  children,
+  size = "md",
+  dismissible = true,
+}) => {
   const dialogRef = useRef(null);
   const titleId = useId();
 
@@ -13,7 +21,9 @@ const Modal = ({ open, onClose, title, eyebrow, children, size = "md" }) => {
     if (!open && dialog.open) dialog.close();
   }, [open]);
 
-  const close = () => onClose?.();
+  const close = () => {
+    if (dismissible) onClose?.();
+  };
 
   return (
     <dialog
@@ -39,6 +49,7 @@ const Modal = ({ open, onClose, title, eyebrow, children, size = "md" }) => {
             type="button"
             className="btn btn-ghost btn-icon"
             onClick={close}
+            disabled={!dismissible}
             aria-label="Close dialog"
           >
             <X size={20} />

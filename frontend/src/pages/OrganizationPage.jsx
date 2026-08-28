@@ -5,6 +5,9 @@ import {
   FolderKanban,
   LayoutGrid,
   Plus,
+  RefreshCw,
+  ShieldCheck,
+  Trash2,
   UserPlus,
   Users,
 } from "lucide-react";
@@ -35,13 +38,18 @@ const OrganizationPage = () => {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [loadErrorStatus, setLoadErrorStatus] = useState(null);
+  const [partialError, setPartialError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
   const [boardOpen, setBoardOpen] = useState(false);
-  const [inviteOpen, setInviteOpen] = useState(false);
+  const [teamOpen, setTeamOpen] = useState(false);
   const [boardTitle, setBoardTitle] = useState("");
   const [memberUsername, setMemberUsername] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
   const [success, setSuccess] = useState("");
+  const [confirmingMemberId, setConfirmingMemberId] = useState("");
+  const [removingMemberId, setRemovingMemberId] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -113,7 +121,7 @@ const OrganizationPage = () => {
   const inviteMember = async (event) => {
     event.preventDefault();
     const username = memberUsername.trim();
-    if (username.length < 3) {
+    if (username.length < 2) {
       setFormError("Enter a valid username.");
       return;
     }
@@ -298,7 +306,7 @@ const OrganizationPage = () => {
               value={boardTitle}
               onChange={(event) => setBoardTitle(event.target.value)}
               placeholder="e.g. Website launch"
-              maxLength={100}
+              maxLength={120}
               autoFocus
               required
             />
@@ -327,6 +335,7 @@ const OrganizationPage = () => {
               onChange={(event) => setMemberUsername(event.target.value)}
               placeholder="e.g. anika"
               autoComplete="off"
+              maxLength={80}
               autoFocus
               required
             />

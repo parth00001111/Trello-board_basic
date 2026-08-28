@@ -61,7 +61,7 @@ const LandingPage = () => {
         </div>
       </header>
 
-      <main>
+      <main id="main-content">
         <section className="tf-hero" aria-labelledby="tf-hero-title">
           <div className="tf-hero__wash" aria-hidden="true" />
           <div className="tf-container tf-hero__grid">
@@ -97,12 +97,12 @@ const LandingPage = () => {
             <div className="tf-hero__visual">
               <div className="tf-hero__visual-badge tf-hero__visual-badge--top" aria-hidden="true">
                 <span className="tf-live-dot" />
-                Team synced
+                Shared workspace
               </div>
               <MarketingBoard />
               <div className="tf-hero__visual-badge tf-hero__visual-badge--bottom" aria-hidden="true">
                 <span className="tf-visual-check"><Check size={14} /></span>
-                <span><strong>12 tasks</strong> completed this week</span>
+                <span><strong>Drag tasks</strong> to update their status</span>
               </div>
             </div>
           </div>
@@ -197,7 +197,7 @@ const LandingPage = () => {
               </div>
               <div className="tf-workflow-panel__note">
                 <Sparkles size={16} aria-hidden="true" />
-                Your team completed 8 more tasks than last week.
+                Every task keeps its owner, priority, due date, and position.
               </div>
             </div>
           </div>

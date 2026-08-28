@@ -1,10 +1,12 @@
 const dotenv = require("dotenv");
 const mongoose = require("mongoose");
+const path = require("node:path");
 const dns = require("dns")
-dns.setServers([ 
+dns.setServers([
   "8.8.8.8", "1.1.1.1"
 ])
-dotenv.config({ quiet: true });
+
+dotenv.config({ path: path.resolve(__dirname, "../.env"), quiet: true });
 
 async function connectDb() {
   if (!process.env.MONGO_URI) {

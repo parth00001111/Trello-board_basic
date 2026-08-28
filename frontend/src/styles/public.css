@@ -7,8 +7,8 @@
   --tf-surface: #ffffff;
   --tf-canvas: #f7f8f5;
   --tf-canvas-warm: #fbf7f0;
-  --tf-accent: #f26a3d;
-  --tf-accent-dark: #d94e24;
+  --tf-accent: #c84a24;
+  --tf-accent-dark: #a83a16;
   --tf-accent-soft: #fff0e9;
   --tf-green: #238b68;
   --tf-blue: #3e73d8;
@@ -490,6 +490,7 @@
   position: relative;
   width: 100%;
   min-height: 510px;
+  margin: 0;
   perspective: 1500px;
   perspective-origin: 50% 45%;
 }

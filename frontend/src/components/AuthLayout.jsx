@@ -13,7 +13,7 @@ const AuthLayout = ({
   previewDescription,
 }) => {
   return (
-    <main className="tf-auth-shell">
+    <main className="tf-auth-shell" id="main-content">
       <div className="tf-auth-orb tf-auth-orb--one" aria-hidden="true" />
       <div className="tf-auth-orb tf-auth-orb--two" aria-hidden="true" />
 
@@ -55,8 +55,8 @@ const AuthLayout = ({
           <div className="tf-auth-preview__stat" aria-hidden="true">
             <span className="tf-auth-preview__pulse" />
             <div>
-              <strong>Everything is on track</strong>
-              <small>8 tasks moved this week</small>
+              <strong>Five clear stages</strong>
+              <small>Move work from backlog to done</small>
             </div>
           </div>
         </aside>

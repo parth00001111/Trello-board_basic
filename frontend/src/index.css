@@ -13,15 +13,15 @@
   --ink-800: #28344b;
   --ink-700: #445069;
   --ink-600: #637089;
-  --ink-500: #8490a5;
+  --ink-500: #637089;
   --ink-300: #c9d0dd;
   --ink-200: #dfe4ec;
   --ink-100: #eef1f6;
   --surface: #ffffff;
   --surface-soft: #f8f9fc;
   --surface-warm: #fffaf5;
-  --brand-700: #c9481d;
-  --brand-600: #e85d2a;
+  --brand-700: #a83a16;
+  --brand-600: #c9481d;
   --brand-500: #f4743b;
   --brand-400: #ff9868;
   --brand-100: #ffede4;
@@ -80,11 +80,33 @@ button {
 
 button:disabled {
   cursor: not-allowed;
+  opacity: 0.58;
 }
 
 a {
   color: inherit;
   text-decoration: none;
+}
+
+.skip-link {
+  position: fixed;
+  z-index: 200;
+  top: 10px;
+  left: 12px;
+  border-radius: 10px;
+  padding: 11px 15px;
+  color: #fff;
+  background: var(--ink-950);
+  font-size: 0.86rem;
+  font-weight: 700;
+  box-shadow: var(--shadow-md);
+  transform: translateY(calc(-100% - 20px));
+  transition: transform 150ms ease;
+}
+
+.skip-link:focus {
+  outline-color: #fff;
+  transform: translateY(0);
 }
 
 img,

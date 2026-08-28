@@ -99,7 +99,7 @@ const TaskPage = () => {
     setDraft({
       ...emptyTask,
       status,
-      assignedMemberId: members[0]?._id || members[0]?.id || "",
+      assignedMemberId: "",
     });
     setEditorError("");
     setConfirmingDelete(false);
@@ -320,8 +320,6 @@ const TaskPage = () => {
       <div className="board-mobile-hint" role="note">
         Swipe horizontally to see every stage. Use each card’s handle to drag it.
       </div>
-
-      <InlineNotice message={loadError} />
 
       <TaskEditorModal
         open={editorOpen}

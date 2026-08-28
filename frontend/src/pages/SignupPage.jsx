@@ -28,8 +28,8 @@ const SignupPage = () => {
 
     if (!username) {
       nextErrors.username = "Choose a username.";
-    } else if (username.length < 3 || username.length > 40) {
-      nextErrors.username = "Username must be between 3 and 40 characters.";
+    } else if (username.length < 2 || username.length > 80) {
+      nextErrors.username = "Username must be between 2 and 80 characters.";
     }
 
     if (!form.password) {
@@ -107,11 +107,11 @@ const SignupPage = () => {
           value={form.username}
           onChange={updateField("username")}
           error={errors.username}
-          hint="Use 3–40 characters."
+          hint="Use 2–80 characters."
           autoComplete="username"
           autoCapitalize="none"
           spellCheck={false}
-          maxLength={40}
+          maxLength={80}
           placeholder="Choose a username"
           disabled={loading}
           required

@@ -28,8 +28,9 @@ const TaskEditorModal = ({
       title={mode === "edit" ? "Task details" : "Create a task"}
       eyebrow={mode === "edit" ? "Keep the work current" : "Make the next step clear"}
       size="lg"
+      dismissible={!submitting}
     >
-      <form className="modal-form task-editor-form" onSubmit={onSubmit}>
+      <form className="modal-form task-editor-form" onSubmit={onSubmit} aria-busy={submitting}>
         <div className="field">
           <label className="field-label" htmlFor="task-title">Task title</label>
           <input
@@ -38,7 +39,7 @@ const TaskEditorModal = ({
             value={draft.title}
             onChange={update("title")}
             placeholder="What needs to happen?"
-            maxLength={140}
+            maxLength={180}
             autoFocus
             required
           />
@@ -47,7 +48,7 @@ const TaskEditorModal = ({
         <div className="field">
           <div className="field-label-row">
             <label className="field-label" htmlFor="task-description">Description</label>
-            <span>{draft.description.length}/800</span>
+            <span>{draft.description.length}/5000</span>
           </div>
           <textarea
             className="textarea task-description-input"
@@ -55,7 +56,7 @@ const TaskEditorModal = ({
             value={draft.description}
             onChange={update("description")}
             placeholder="Add context, acceptance criteria or a useful note…"
-            maxLength={800}
+            maxLength={5000}
           />
         </div>
 
@@ -102,7 +103,12 @@ const TaskEditorModal = ({
               <span>This action cannot be undone.</span>
             </div>
             <div>
-              <button className="btn btn-ghost btn-sm" type="button" onClick={() => setConfirmingDelete(false)}>
+              <button
+                className="btn btn-ghost btn-sm"
+                type="button"
+                onClick={() => setConfirmingDelete(false)}
+                disabled={submitting}
+              >
                 Keep task
               </button>
               <button className="btn btn-danger btn-sm" type="button" onClick={onDelete} disabled={submitting}>
@@ -114,13 +120,25 @@ const TaskEditorModal = ({
           <div className="modal-actions modal-actions-split">
             <div>
               {mode === "edit" && (
-                <button className="btn btn-ghost task-delete-button" type="button" onClick={() => setConfirmingDelete(true)}>
+                <button
+                  className="btn btn-ghost task-delete-button"
+                  type="button"
+                  onClick={() => setConfirmingDelete(true)}
+                  disabled={submitting}
+                >
                   <Trash2 size={16} /> Delete
                 </button>
               )}
             </div>
             <div>
-              <button className="btn btn-secondary" type="button" onClick={onClose}>Cancel</button>
+              <button
+                className="btn btn-secondary"
+                type="button"
+                onClick={onClose}
+                disabled={submitting}
+              >
+                Cancel
+              </button>
               <button className="btn btn-primary" type="submit" disabled={submitting}>
                 {submitting && <span className="spinner" aria-hidden="true" />}
                 {submitting ? "Saving…" : mode === "edit" ? "Save changes" : "Create task"}

@@ -1,6 +1,7 @@
 const dotenv = require("dotenv");
+const path = require("node:path");
 
-dotenv.config({ quiet: true });
+dotenv.config({ path: path.resolve(__dirname, "../.env"), quiet: true });
 
 const bcrypt = require("bcrypt");
 const cookieParser = require("cookie-parser");
@@ -12,6 +13,7 @@ const mongoose = require("mongoose");
 
 const connectDb = require("./db");
 const { authMiddleware, getJwtSecret } = require("./middleware");
+const { createFixedWindowRateLimiter } = require("./rateLimiter");
 const {
   ISSUE_PRIORITIES,
   ISSUE_STATUSES,
@@ -24,9 +26,24 @@ const {
 
 const app = express();
 app.disable("x-powered-by");
+
+const configuredTrustProxy = process.env.TRUST_PROXY?.trim();
+if (configuredTrustProxy) {
+  const trustProxySetting = /^\d+$/.test(configuredTrustProxy)
+    ? Number(configuredTrustProxy)
+    : configuredTrustProxy === "true"
+      ? true
+      : configuredTrustProxy === "false"
+        ? false
+        : configuredTrustProxy;
+  app.set("trust proxy", trustProxySetting);
+}
+
 const port = Number(process.env.PORT) || 5000;
 const TOKEN_TTL = "7d";
 const COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
+const DUMMY_PASSWORD_HASH =
+  "$2b$12$I7IStq2DOPPn9EmtRdl.Y.zgCtAMGApqmMx6AP55rVd7mgDyU/WgG";
 
 class HttpError extends Error {
   constructor(status, message) {
@@ -60,6 +77,29 @@ app.use(cookieParser());
 app.use((req, res, next) => {
   req.body ||= {};
   next();
+});
+
+const signupRateLimiter = createFixedWindowRateLimiter({
+  windowMs: 60 * 60 * 1000,
+  limit: 10,
+  message: "Too many accounts were created from this connection. Try again later.",
+});
+
+const signinIpRateLimiter = createFixedWindowRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  limit: 100,
+  message: "Too many sign-in attempts from this connection. Try again later.",
+});
+
+const signinRateLimiter = createFixedWindowRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  message: "Too many sign-in attempts. Wait a few minutes and try again.",
+  keyGenerator: (req) => {
+    const username =
+      typeof req.body?.username === "string" ? req.body.username.trim().toLowerCase() : "unknown";
+    return `${req.ip || req.socket?.remoteAddress || "unknown"}:${username}`;
+  },
 });
 
 function cookieBaseOptions(httpOnly) {
@@ -454,6 +494,7 @@ async function deleteIssueById(issueId, userId) {
 
 app.post(
   "/signup",
+  signupRateLimiter,
   asyncHandler(async (req, res) => {
     const username = requireString(req.body.username, "username", { min: 2, max: 80 });
     const password = req.body.password;
@@ -481,6 +522,8 @@ app.post(
 
 app.post(
   "/signin",
+  signinIpRateLimiter,
+  signinRateLimiter,
   asyncHandler(async (req, res) => {
     const username = requireString(req.body.username, "username", { min: 1, max: 80 });
     const password = req.body.password;
@@ -496,6 +539,8 @@ app.post(
       credentialsMatch = await bcrypt.compare(password, storedPassword);
     } else if (user) {
       credentialsMatch = safePlaintextCompare(password, storedPassword);
+    } else {
+      await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
     }
 
     if (!user || !credentialsMatch) {

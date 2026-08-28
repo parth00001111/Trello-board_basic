@@ -5,14 +5,25 @@ import UserAvatar from "./UserAvatar";
 const formatDueDate = (value) => {
   if (!value) return null;
   const date = new Date(value);
-  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(date);
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  }).format(date);
 };
 
 const isOverdue = (value, status) => {
   if (!value || status === "done") return false;
-  const due = new Date(value);
-  due.setHours(23, 59, 59, 999);
-  return due < new Date();
+  const dueDate = new Date(value);
+  if (Number.isNaN(dueDate.getTime())) return false;
+  const dueKey = dueDate.toISOString().slice(0, 10);
+  const today = new Date();
+  const todayKey = [
+    today.getFullYear(),
+    String(today.getMonth() + 1).padStart(2, "0"),
+    String(today.getDate()).padStart(2, "0"),
+  ].join("-");
+  return dueKey < todayKey;
 };
 
 const TaskCard = ({ issue, index, onOpen, dragDisabled }) => (
@@ -27,15 +38,15 @@ const TaskCard = ({ issue, index, onOpen, dragDisabled }) => (
           <span className={`priority-badge priority-${issue.priority || "medium"}`}>
             {issue.priority || "medium"}
           </span>
-          <button
-            type="button"
-            className="task-drag-handle"
+          <span
+            className={`task-drag-handle${dragDisabled ? " is-disabled" : ""}`}
             {...provided.dragHandleProps}
             aria-label={`Move ${issue.title}`}
+            aria-disabled={dragDisabled}
             title="Drag to move task"
           >
             <GripVertical size={17} />
-          </button>
+          </span>
         </div>
 
         <button className="task-card-content" type="button" onClick={() => onOpen(issue)}>

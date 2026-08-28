@@ -71,7 +71,7 @@ const SigninPage = () => {
     <AuthLayout
       eyebrow="Welcome back"
       title="Sign in to your workspace"
-      description="Pick up your projects, priorities, and team conversations right where you left them."
+      description="Pick up your projects, priorities, and shared team work right where you left them."
       previewTitle="Keep the whole plan in view."
       previewDescription="See priorities, owners, and progress together—then move work forward in a single gesture."
       footer={
@@ -104,7 +104,7 @@ const SigninPage = () => {
           inputMode="text"
           autoCapitalize="none"
           spellCheck={false}
-          maxLength={40}
+          maxLength={80}
           placeholder="Enter your username"
           disabled={loading}
           required

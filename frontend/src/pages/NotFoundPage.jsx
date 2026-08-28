@@ -2,7 +2,7 @@ import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const NotFoundPage = () => (
-  <main className="not-found-page">
+  <main className="not-found-page" id="main-content">
     <div className="not-found-orbit" aria-hidden="true">
       <span>4</span>
       <i />

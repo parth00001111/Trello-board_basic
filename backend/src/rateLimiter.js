@@ -22,7 +22,7 @@ function createFixedWindowRateLimiter({
   function pruneExpired(now) {
     for (const [key, entry] of entries) {
       if (entry.resetAt <= now) {
-        entries.delete(key)
+        entries.delete(key);
       }
     }
     nextPruneAt = now + pruneIntervalMs;
