@@ -27,6 +27,7 @@ const {
 const app = express();
 app.disable("x-powered-by");
 
+
 const configuredTrustProxy = process.env.TRUST_PROXY?.trim();
 if (configuredTrustProxy) {
   const trustProxySetting = /^\d+$/.test(configuredTrustProxy)
@@ -79,6 +80,7 @@ const allowedOrigins = new Set(
     .filter(Boolean)
     .map(normalizeOrigin)
 );
+console.log("Allowed origins:", Array.from(allowedOrigins));
 
 app.use(
   cors({
