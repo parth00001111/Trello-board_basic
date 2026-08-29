@@ -1,12 +1,15 @@
 import axios from "axios";
 
+const configuredApiUrl = import.meta.env.VITE_API_URL?.trim().replace(/\/+$/, "");
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000",
+  baseURL: configuredApiUrl || "http://localhost:5000",
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 15000,
+  // Render free services can need extra time for the first request after sleeping.
+  timeout: 75000,
 });
 
 export const getErrorMessage = (

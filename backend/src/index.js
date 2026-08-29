@@ -55,17 +55,46 @@ class HttpError extends Error {
 const asyncHandler = (handler) => (req, res, next) =>
   Promise.resolve(handler(req, res, next)).catch(next);
 
-const allowedOrigins = (process.env.CLIENT_ORIGIN || "http://localhost:5173")
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
+const normalizeOrigin = (origin) => {
+  try {
+    const parsedOrigin = new URL(origin);
+    if (!["http:", "https:"].includes(parsedOrigin.protocol)) {
+      throw new Error("Unsupported origin protocol");
+    }
+    return parsedOrigin.origin;
+  } catch {
+    throw new Error(`CLIENT_ORIGIN contains an invalid URL: ${origin}`);
+  }
+};
+
+const configuredClientOrigins = process.env.CLIENT_ORIGIN?.trim();
+if (process.env.NODE_ENV === "production" && !configuredClientOrigins) {
+  throw new Error("CLIENT_ORIGIN is required in production");
+}
+
+const allowedOrigins = new Set(
+  (configuredClientOrigins || "http://localhost:5173")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+    .map(normalizeOrigin)
+);
 
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin) {
         return callback(null, true);
       }
+
+      try {
+        if (allowedOrigins.has(normalizeOrigin(origin))) {
+          return callback(null, true);
+        }
+      } catch {
+        return callback(new HttpError(403, "Origin is not allowed"));
+      }
+
       return callback(new HttpError(403, "Origin is not allowed"));
     },
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -101,6 +130,30 @@ const signinRateLimiter = createFixedWindowRateLimiter({
     return `${req.ip || req.socket?.remoteAddress || "unknown"}:${username}`;
   },
 });
+
+app.get("/", (req, res) => {
+  return res.json({
+    name: "TaskFlow API",
+    status: "ok",
+    health: "/health",
+  });
+});
+
+app.get(
+  "/health",
+  asyncHandler(async (req, res) => {
+    if (mongoose.connection.readyState !== 1 || !mongoose.connection.db) {
+      return res.status(503).json({ status: "unhealthy", database: "disconnected" });
+    }
+
+    try {
+      await mongoose.connection.db.admin().ping();
+      return res.json({ status: "healthy", database: "connected" });
+    } catch {
+      return res.status(503).json({ status: "unhealthy", database: "unreachable" });
+    }
+  })
+);
 
 function cookieBaseOptions(httpOnly) {
   const secure =
