@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useParams } from "react-router-dom";
 import AuthProvider from "./context/AuthProvider";
 import GuestRoute from "./components/GuestRoute";
 import NavigationEffects from "./components/NavigationEffects";
@@ -12,6 +12,16 @@ const DashBoard = lazy(() => import("./pages/DashBoard"));
 const OrganizationPage = lazy(() => import("./pages/OrganizationPage"));
 const TaskPage = lazy(() => import("./pages/TaskPage"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
+
+const OrganizationRoute = () => {
+  const { id } = useParams();
+  return <OrganizationPage key={id} />;
+};
+
+const BoardRoute = () => {
+  const { id } = useParams();
+  return <TaskPage key={id} />;
+};
 
 const RouteFallback = () => (
   <main className="route-loader" id="main-content" aria-busy="true" aria-label="Loading page">
@@ -39,8 +49,8 @@ const App = () => (
 
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<DashBoard />} />
-            <Route path="/organizations/:id" element={<OrganizationPage />} />
-            <Route path="/board/:id" element={<TaskPage />} />
+            <Route path="/organizations/:id" element={<OrganizationRoute />} />
+            <Route path="/board/:id" element={<BoardRoute />} />
           </Route>
 
           <Route path="/home" element={<Navigate to="/dashboard" replace />} />

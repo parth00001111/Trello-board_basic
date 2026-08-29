@@ -7,6 +7,12 @@ function getJwtSecret() {
   if (!secret) {
     throw new Error("JWT_SECRET is not configured");
   }
+  if (
+    Buffer.byteLength(secret, "utf8") < 32 ||
+    secret === "replace-this-with-a-long-random-secret"
+  ) {
+    throw new Error("JWT_SECRET must be a non-placeholder secret of at least 32 bytes");
+  }
   return secret;
 }
 
@@ -15,7 +21,7 @@ async function authMiddleware(req, res, next) {
   const bearerToken = authorization?.startsWith("Bearer ")
     ? authorization.slice(7).trim()
     : null;
-  const token = req.cookies?.token || bearerToken;
+  const token = bearerToken || req.cookies?.token;
 
   if (!token) {
     return res.status(401).json({ message: "Authentication required" });
@@ -23,9 +29,9 @@ async function authMiddleware(req, res, next) {
 
   let decoded;
   try {
-    decoded = jwt.verify(token, getJwtSecret());
+    decoded = jwt.verify(token, getJwtSecret(), { algorithms: ["HS256"] });
   } catch (error) {
-    if (error.message === "JWT_SECRET is not configured") {
+    if (error.message?.startsWith("JWT_SECRET ")) {
       return next(error);
     }
     return res.status(401).json({ message: "Invalid or expired authentication token" });

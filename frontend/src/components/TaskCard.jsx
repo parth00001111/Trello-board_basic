@@ -26,7 +26,7 @@ const isOverdue = (value, status) => {
   return dueKey < todayKey;
 };
 
-const TaskCard = ({ issue, index, onOpen, dragDisabled }) => (
+const TaskCard = ({ issue, index, onOpen, dragDisabled, interactionDisabled = false }) => (
   <Draggable draggableId={String(issue._id)} index={index} isDragDisabled={dragDisabled}>
     {(provided, snapshot) => (
       <article
@@ -49,7 +49,12 @@ const TaskCard = ({ issue, index, onOpen, dragDisabled }) => (
           </span>
         </div>
 
-        <button className="task-card-content" type="button" onClick={() => onOpen(issue)}>
+        <button
+          className="task-card-content"
+          type="button"
+          onClick={() => onOpen(issue)}
+          disabled={interactionDisabled}
+        >
           <h3>{issue.title}</h3>
           {issue.description && <p>{issue.description}</p>}
         </button>

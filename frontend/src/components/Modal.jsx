@@ -67,7 +67,9 @@ const Modal = ({
         event.preventDefault();
         close();
       }}
-      onClose={close}
+      onClose={() => {
+        if (open) close();
+      }}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) close();
       }}

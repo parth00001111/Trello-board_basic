@@ -327,6 +327,25 @@ async function validateAssignee(assigneeId, organization) {
   return assigneeId;
 }
 
+async function clearAssigneeIfAccessWasRevoked(issue, organizationId) {
+  if (!issue?.assignedTo) return false;
+
+  const currentOrganization = await organizationModel
+    .findById(organizationId)
+    .select("admin members")
+    .lean();
+
+  if (currentOrganization && hasOrganizationAccess(currentOrganization, issue.assignedTo)) {
+    return false;
+  }
+
+  const result = await issueModel.updateOne(
+    { _id: issue._id, assignedTo: issue.assignedTo },
+    { $set: { assignedTo: null } }
+  );
+  return result.modifiedCount > 0;
+}
+
 async function getNextPosition(boardId, status) {
   const lastIssue = await issueModel
     .findOne({ boardId, status })
@@ -466,6 +485,10 @@ async function updateIssueById(issueId, updates, userId) {
   }
 
   await issue.save();
+  await clearAssigneeIfAccessWasRevoked(
+    issue,
+    destinationContext.organization._id
+  );
 
   if (changedBoard || changedStatus) {
     await normalizePositions(originalBoardId, originalStatus);
@@ -556,12 +579,13 @@ app.post(
     }
 
     const token = jwt.sign({ userId: user._id.toString() }, getJwtSecret(), {
+      algorithm: "HS256",
       expiresIn: TOKEN_TTL,
     });
 
     return res
+      .clearCookie("username", cookieBaseOptions(false))
       .cookie("token", token, cookieOptions(true))
-      .cookie("username", user.username, cookieOptions(false))
       .json({
         message: "Signed in successfully",
         user: { id: user._id, username: user.username },
@@ -733,19 +757,30 @@ app.delete(
       throw new HttpError(400, "The organization admin cannot be removed");
     }
 
+    const boardIds = await boardsModel.distinct("_id", {
+      organizationId: organization._id,
+    });
     const result = await organizationModel.updateOne(
       { _id: organization._id },
       { $pull: { members: memberUser._id } }
     );
-    const boardIds = await boardsModel.distinct("_id", {
-      organizationId: organization._id,
-    });
-    const assignmentResult = boardIds.length
-      ? await issueModel.updateMany(
+    let assignmentResult = { modifiedCount: 0 };
+    try {
+      if (boardIds.length) {
+        assignmentResult = await issueModel.updateMany(
           { boardId: { $in: boardIds }, assignedTo: memberUser._id },
           { $set: { assignedTo: null } }
-        )
-      : { modifiedCount: 0 };
+        );
+      }
+    } catch (error) {
+      if (result.modifiedCount) {
+        await organizationModel.updateOne(
+          { _id: organization._id },
+          { $addToSet: { members: memberUser._id } }
+        );
+      }
+      throw error;
+    }
 
     return res.json({
       message: result.modifiedCount ? "Member removed" : "User was not a member",
@@ -847,6 +882,7 @@ app.post(
       priority,
       dueDate: hasOwn(req.body, "dueDate") ? parseDueDate(req.body.dueDate) : null,
     });
+    await clearAssigneeIfAccessWasRevoked(issue, organization._id);
     const populatedIssue = await issueModel
       .findById(issue._id)
       .populate("createdBy", "username")

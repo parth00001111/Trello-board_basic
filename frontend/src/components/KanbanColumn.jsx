@@ -2,7 +2,14 @@ import { Droppable } from "@hello-pangea/dnd";
 import { Plus } from "lucide-react";
 import TaskCard from "./TaskCard";
 
-const KanbanColumn = ({ column, issues, onAdd, onOpen, dragDisabled }) => (
+const KanbanColumn = ({
+  column,
+  issues,
+  onAdd,
+  onOpen,
+  dragDisabled,
+  interactionDisabled = false,
+}) => (
   <section className={`kanban-column column-${column.tone}`} aria-labelledby={`column-${column.id}`}>
     <header className="kanban-column-header">
       <div>
@@ -14,6 +21,7 @@ const KanbanColumn = ({ column, issues, onAdd, onOpen, dragDisabled }) => (
         className="column-add-button"
         type="button"
         onClick={() => onAdd(column.id)}
+        disabled={interactionDisabled}
         aria-label={`Add task to ${column.title}`}
       >
         <Plus size={17} />
@@ -35,11 +43,17 @@ const KanbanColumn = ({ column, issues, onAdd, onOpen, dragDisabled }) => (
               index={index}
               onOpen={onOpen}
               dragDisabled={dragDisabled}
+              interactionDisabled={interactionDisabled}
             />
           ))}
           {provided.placeholder}
           {!issues.length && !snapshot.isDraggingOver && (
-            <button className="column-empty-state" type="button" onClick={() => onAdd(column.id)}>
+            <button
+              className="column-empty-state"
+              type="button"
+              onClick={() => onAdd(column.id)}
+              disabled={interactionDisabled}
+            >
               <Plus size={16} /> Add the first task
             </button>
           )}

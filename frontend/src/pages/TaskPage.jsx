@@ -137,6 +137,7 @@ const TaskPage = () => {
   };
 
   const openCreate = (status = "todo") => {
+    if (savingOrder) return;
     setEditorMode("create");
     setActiveIssue(null);
     setDraft({
@@ -150,6 +151,7 @@ const TaskPage = () => {
   };
 
   const openEdit = (issue) => {
+    if (savingOrder) return;
     setEditorMode("edit");
     setActiveIssue(issue);
     setDraft({
@@ -343,6 +345,7 @@ const TaskPage = () => {
             className="btn btn-primary"
             type="button"
             onClick={() => openCreate("todo")}
+            disabled={savingOrder}
           >
             <Plus size={18} /> Add task
           </button>
@@ -371,6 +374,7 @@ const TaskPage = () => {
               onAdd={openCreate}
               onOpen={openEdit}
               dragDisabled={savingOrder}
+              interactionDisabled={savingOrder}
             />
           ))}
         </div>
